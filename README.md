@@ -3,6 +3,7 @@
 
 ## 使い方
 docker上で動かせます. dockerをサーバに入れとくとセットアップが楽です.
+Discord上でボタンをポチポチ推すとメッセージを送れます.
 
 1. githubからプロジェクトファイルをクローン/ダウンロードする.
 2. Dockerfileがあるディレクトリまで移動する.
@@ -14,7 +15,7 @@ docker上で動かせます. dockerをサーバに入れとくとセットアッ
 4. イメージからコンテナを実行します. 
    docker run -d "イメージ名"
 5. コンテナを停止させます.
-   docker stop
+   docker stop "コンテナ名"
    
 ## 設定ファイル
 src内のsetting.jsonが設定ファイルです. setting.json.sampleはサンプルファイルです.
