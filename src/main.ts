@@ -151,7 +151,11 @@ client.on(Events.InteractionCreate, async (interaction) => {
 
     interaction.client.user.setPresence(presence)//Presenceを更新する
 
-    const username = interaction.user.tag
+    const userTag = interaction.user.tag; // userTagを取得
+
+    // userTagを#で分割して識別タグが0ならば，usernameを取得する
+    const username = userTag.split("#")[1] ? interaction.user.username : userTag;
+    
     const userIconUrl = interaction.user.avatarURL()
     
     const embed = new EmbedBuilder()//鍵になにかした時のメッセージを作る
