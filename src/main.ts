@@ -115,9 +115,12 @@ const sendReminderMessage = async (
         )
         .setTimestamp();
 
+      const currentButtonSet = mapButtons.get(var_status) || new ActionRowBuilder<ButtonBuilder>().addComponents(borrow_button);
+
       await (channel as TextChannel).send({
         content: `<@${userId}>`,
         embeds: [embed],
+        components: [currentButtonSet],
       });
 
       console.log(`リマインダーを送信しました (${count}回目)`);
@@ -220,9 +223,12 @@ const check20OClock = async () => {
           )
           .setTimestamp();
 
+        const currentButtonSet = mapButtons.get(var_status) || new ActionRowBuilder<ButtonBuilder>().addComponents(borrow_button);
+
         await (channel as TextChannel).send({
           content: `<@${borrowerInfo.userId}>`,
           embeds: [embed],
+          components: [currentButtonSet],
         });
 
         console.log(`定時チェック: ${borrowerInfo.username}に返却リマインダーを送信しました。`);
@@ -402,31 +408,22 @@ client.once("ready", async (bot) => {
   // スラッシュコマンドを登録
   const commands = [
     new SlashCommandBuilder()
-      .setName("reminder")
-      .setDescription("リマインダー機能のON/OFF")
-      .addStringOption(option =>
-        option.setName("status")
-          .setDescription("ON または OFF")
-          .setRequired(true)
-          .addChoices(
-            { name: "ON", value: "on" },
-            { name: "OFF", value: "off" }
-          )
+      .setName("borrow")
+      .setDescription("鍵を借りる（オプション：リマインダー開始時間を分で指定）")
+      .addIntegerOption(option =>
+        option.setName("delay-minutes")
+          .setDescription("指定分後にリマインダー開始（指定なしはデフォルト）")
+          .setRequired(false)
+          .setMinValue(0)
       ),
+    new SlashCommandBuilder()
+      .setName("reminder")
+      .setDescription("リマインダー機能のON/OFF（トグル）"),
     new SlashCommandBuilder()
       .setName("scheduled-check")
-      .setDescription("定時チェック機能のON/OFF")
-      .addStringOption(option =>
-        option.setName("status")
-          .setDescription("ON または OFF")
-          .setRequired(true)
-          .addChoices(
-            { name: "ON", value: "on" },
-            { name: "OFF", value: "off" }
-          )
-      ),
+      .setDescription("定時チェック機能のON/OFF（トグル）"),
     new SlashCommandBuilder()
-      .setName("set-reminder-time")
+      .setName("reminder-time")
       .setDescription("リマインダー送信時間を設定（分）")
       .addIntegerOption(option =>
         option.setName("minutes")
@@ -436,7 +433,16 @@ client.once("ready", async (bot) => {
           .setMaxValue(1440)
       ),
     new SlashCommandBuilder()
-      .setName("set-check-time")
+      .setName("reminder-time-ms")
+      .setDescription("リマインダー送信時間を設定（ミリ秒）")
+      .addIntegerOption(option =>
+        option.setName("milliseconds")
+          .setDescription("リマインダー送信までの時間（ミリ秒）")
+          .setRequired(true)
+          .setMinValue(1)
+      ),
+    new SlashCommandBuilder()
+      .setName("check-time")
       .setDescription("定時チェックの時刻を設定")
       .addIntegerOption(option =>
         option.setName("hour")
@@ -453,10 +459,10 @@ client.once("ready", async (bot) => {
           .setMaxValue(59)
       ),
     new SlashCommandBuilder()
-      .setName("alarm-status")
+      .setName("status")
       .setDescription("現在のアラーム設定を表示"),
     new SlashCommandBuilder()
-      .setName("change-owner")
+      .setName("owner")
       .setDescription("鍵の持ち主を変更")
       .addUserOption(option =>
         option.setName("user")
@@ -502,31 +508,154 @@ const isKey = (value: string): value is Key => {
 };
 
 client.on(Events.InteractionCreate, async (interaction) => {
+  // ヘルパー関数：コマンド返信に鍵操作ボタンを追加
+  const getKeyButtonsForCommand = (): ActionRowBuilder<ButtonBuilder> => {
+    const buttons = mapButtons.get(var_status);
+    return buttons || new ActionRowBuilder<ButtonBuilder>().addComponents(borrow_button);
+  };
+
   // スラッシュコマンドの処理
   if (interaction.isChatInputCommand()) {
     const { commandName } = interaction;
 
+    if (commandName === "borrow") {
+      const delayMinutes = interaction.options.getInteger("delay-minutes");
+      
+      // 鍵を借りる処理
+      if (var_status === "RETURN") {
+        // まず鍵を借りた状態に
+        var_status = "BORROW";
+        
+        const userTag = interaction.user.tag;
+        const username = userTag.split("#")[1] ? interaction.user.username : userTag;
+        const userIconUrl = interaction.user.avatarURL();
+
+        const embed = new EmbedBuilder()
+          .setColor(0x0099ff)
+          .setAuthor({ name: username, iconURL: userIconUrl ?? undefined })
+          .setTitle("借りました")
+          .setTimestamp();
+
+        if (isReminderEnabled) {
+          embed.addFields({
+            name: "⏰ リマインダー設定",
+            value: `リマインダーが有効です\n・間隔: ${reminderTimeMinutes}分ごと\n・定時チェック: ${checkHour}時${checkMinute}分`,
+            inline: false
+          });
+        } else {
+          embed.addFields({
+            name: "⏰ リマインダー設定",
+            value: `リマインダーは無効です\n・定時チェック: ${isScheduledCheckEnabled ? `${checkHour}時${checkMinute}分` : "無効"}`,
+            inline: false
+          });
+        }
+
+        const buttonSet = mapButtons.get(var_status) || new ActionRowBuilder<ButtonBuilder>().addComponents(borrow_button);
+
+        await interaction.reply({
+          embeds: [embed],
+          components: [buttonSet],
+        });
+
+        // リマインダーを設定
+        if (isReminderEnabled) {
+          const now = Date.now();
+          const delayMs = (delayMinutes ?? reminderTimeMinutes) * 60 * 1000;
+          
+          const timerId = setTimeout(() => {
+            sendReminderMessage(
+              interaction.user.id,
+              username,
+              interaction.channelId
+            );
+          }, delayMs);
+
+          borrowerInfo = {
+            userId: interaction.user.id,
+            username: username,
+            channelId: interaction.channelId,
+            timerId: timerId,
+            borrowedAt: now,
+            reminderCount: 0,
+          };
+
+          console.log(
+            `${username}が鍵を借りました。${delayMinutes ?? reminderTimeMinutes}分後にリマインダーを送信します。`
+          );
+        } else {
+          borrowerInfo = {
+            userId: interaction.user.id,
+            username: username,
+            channelId: interaction.channelId,
+            timerId: null,
+            borrowedAt: Date.now(),
+            reminderCount: 0,
+          };
+          console.log(`${username}が鍵を借りました。リマインダー機能はOFFです。`);
+        }
+
+        const presence = mapPresence.get(var_status);
+        if (presence) {
+          interaction.client.user?.setPresence(presence);
+        }
+      } else if (borrowerInfo && (var_status === "BORROW" || var_status === "OPEN" || var_status === "CLOSE")) {
+        // 既に借りている状態でコマンド実行 → リマインダー遅延を更新
+        const delayMs = (delayMinutes ?? reminderTimeMinutes) * 60 * 1000;
+
+        if (borrowerInfo.timerId) {
+          clearTimeout(borrowerInfo.timerId);
+        }
+
+        const timerId = setTimeout(() => {
+          sendReminderMessage(
+            borrowerInfo!.userId,
+            borrowerInfo!.username,
+            borrowerInfo!.channelId
+          );
+        }, delayMs);
+
+        borrowerInfo.timerId = timerId;
+        borrowerInfo.reminderCount = 0; // カウントをリセット
+        borrowerInfo.borrowedAt = Date.now(); // 基準時刻を更新
+
+        await interaction.reply({
+          content: `リマインダー開始時間を${delayMinutes ?? reminderTimeMinutes}分後に設定しました。`,
+          components: [getKeyButtonsForCommand()],
+        });
+
+        console.log(
+          `リマインダー開始時間を${delayMinutes ?? reminderTimeMinutes}分後に更新しました。`
+        );
+      } else {
+        await interaction.reply({
+          content: "❌ 無効な状態です。",
+          components: [getKeyButtonsForCommand()],
+        });
+      }
+      return;
+    }
+
     if (commandName === "reminder") {
-      const status = interaction.options.getString("status");
-      isReminderEnabled = status === "on";
+      isReminderEnabled = !isReminderEnabled;
       await interaction.reply({
         content: `リマインダー機能を${isReminderEnabled ? "ON" : "OFF"}にしました。`,
+        components: [getKeyButtonsForCommand()],
       });
       console.log(`リマインダー機能: ${isReminderEnabled ? "ON" : "OFF"}`);
       return;
     }
 
     if (commandName === "scheduled-check") {
-      const status = interaction.options.getString("status");
-      isScheduledCheckEnabled = status === "on";
+      isScheduledCheckEnabled = !isScheduledCheckEnabled;
       await interaction.reply({
         content: `定時チェック機能を${isScheduledCheckEnabled ? "ON" : "OFF"}にしました。`,
+        components: [getKeyButtonsForCommand()],
       });
       console.log(`定時チェック機能: ${isScheduledCheckEnabled ? "ON" : "OFF"}`);
       return;
     }
 
-    if (commandName === "set-reminder-time") {
+    if (commandName === "reminder-time") {
       const minutes = interaction.options.getInteger("minutes");
       if (minutes) {
         reminderTimeMinutes = minutes;
@@ -536,10 +665,12 @@ client.on(Events.InteractionCreate, async (interaction) => {
           rescheduleReminderTimer();
           await interaction.reply({
             content: `リマインダー送信時間を${minutes}分に設定しました。`,
+            components: [getKeyButtonsForCommand()],
           });
         } else {
           await interaction.reply({
             content: `リマインダー間隔を${minutes}分に設定しました。`,
+            components: [getKeyButtonsForCommand()],
           });
         }
 
@@ -548,7 +679,31 @@ client.on(Events.InteractionCreate, async (interaction) => {
       return;
     }
 
-    if (commandName === "set-check-time") {
+    if (commandName === "reminder-time-ms") {
+      const milliseconds = interaction.options.getInteger("milliseconds");
+      if (milliseconds) {
+        reminderTimeMinutes = Math.floor(milliseconds / 1000 / 60); // ミリ秒を分に変換して保存
+        
+        // 鍵が借りられている場合、リマインダーを再スケジュール
+        if (borrowerInfo && var_status !== "RETURN") {
+          rescheduleReminderTimer();
+          await interaction.reply({
+            content: `リマインダー送信時間を${milliseconds}ミリ秒（≈${reminderTimeMinutes}分）に設定しました。`,
+            components: [getKeyButtonsForCommand()],
+          });
+        } else {
+          await interaction.reply({
+            content: `リマインダー間隔を${milliseconds}ミリ秒（≈${reminderTimeMinutes}分）に設定しました。`,
+            components: [getKeyButtonsForCommand()],
+          });
+        }
+
+        console.log(`リマインダー間隔: ${milliseconds}ミリ秒（${reminderTimeMinutes}分に変換）`);
+      }
+      return;
+    }
+
+    if (commandName === "check-time") {
       const hour = interaction.options.getInteger("hour");
       const minute = interaction.options.getInteger("minute");
       if (hour !== null && minute !== null) {
@@ -560,13 +715,14 @@ client.on(Events.InteractionCreate, async (interaction) => {
         
         await interaction.reply({
           content: `定時チェック時刻を${hour}時${minute}分に設定しました。`,
+          components: [getKeyButtonsForCommand()],
         });
         console.log(`定時チェック時刻: ${hour}時${minute}分に変更し、スケジュールを再設定しました。`);
       }
       return;
     }
 
-    if (commandName === "alarm-status") {
+    if (commandName === "status") {
       const statusEmbed = new EmbedBuilder()
         .setColor(0x00ff00)
         .setTitle("⚙️ アラーム設定状況")
@@ -580,15 +736,17 @@ client.on(Events.InteractionCreate, async (interaction) => {
 
       await interaction.reply({
         embeds: [statusEmbed],
+        components: [getKeyButtonsForCommand()],
       });
       return;
     }
 
-    if (commandName === "change-owner") {
+    if (commandName === "owner") {
       // 鍵が借りられているかチェック
       if (var_status === "RETURN" || !borrowerInfo) {
         await interaction.reply({
           content: "❌ 現在、鍵は借りられていません。",
+          components: [getKeyButtonsForCommand()],
         });
         return;
       }
@@ -597,6 +755,7 @@ client.on(Events.InteractionCreate, async (interaction) => {
       if (!newOwner) {
         await interaction.reply({
           content: "❌ ユーザーが指定されていません。",
+          components: [getKeyButtonsForCommand()],
         });
         return;
       }
@@ -658,6 +817,7 @@ client.on(Events.InteractionCreate, async (interaction) => {
 
       await interaction.reply({
         embeds: [changeEmbed],
+        components: [getKeyButtonsForCommand()],
       });
 
       return;
