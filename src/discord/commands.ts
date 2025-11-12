@@ -33,16 +33,6 @@ export const commands = [
         .setMinValue(1)
         .setMaxValue(1440)
     ),
-  // /reminder-time-ms コマンド: リマインダー送信間隔を設定（ミリ秒単位）
-  new SlashCommandBuilder()
-    .setName("reminder-time-ms")
-    .setDescription("リマインダー送信時間を設定（ミリ秒）")
-    .addIntegerOption(option =>
-      option.setName("milliseconds")
-        .setDescription("リマインダー送信までの時間（ミリ秒）")
-        .setRequired(true)
-        .setMinValue(1)
-    ),
   // /check-time コマンド: 定時チェックの時刻を設定
   new SlashCommandBuilder()
     .setName("check-time")

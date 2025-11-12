@@ -45,7 +45,6 @@ docker-compose restart
 - **ReminderTimeMinutes** : リマインダー間隔（分）。デフォルト：180分
 - **checkHour** : 定時チェック時刻（時）。デフォルト：20
 - **checkMinute** : 定時チェック時刻（分）。デフォルト：0
-- **Slack** : Slack 連携（オプション）
 
 ## 機能
 
