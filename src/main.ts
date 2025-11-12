@@ -288,32 +288,6 @@ client.on(Events.InteractionCreate, async (interaction) => {
       return;
     }
 
-    // /reminder-time-ms コマンド: リマインダー送信間隔を設定（ミリ秒単位）
-    if (commandName === "reminder-time-ms") {
-      const milliseconds = interaction.options.getInteger("milliseconds");
-      if (milliseconds) {
-        const minutes = Math.floor(milliseconds / 1000 / 60);
-        setReminderTimeMinutes(minutes); // ミリ秒を分に変換
-        
-        // 鍵が借りられている場合、リマインダーを再スケジュール
-        if (borrowerInfo && var_status !== "RETURN") {
-          rescheduleReminderTimer(client, var_status, mapButtons, borrow_button);
-          await interaction.reply({
-            content: `リマインダー送信時間を${milliseconds}ミリ秒（≈${minutes}分）に設定しました。`,
-            components: [getKeyButtonsForCommand()],
-          });
-        } else {
-          await interaction.reply({
-            content: `リマインダー間隔を${milliseconds}ミリ秒（≈${minutes}分）に設定しました。`,
-            components: [getKeyButtonsForCommand()],
-          });
-        }
-
-        console.log(`リマインダー間隔: ${milliseconds}ミリ秒（${minutes}分に変換）`);
-      }
-      return;
-    }
-
     // /check-time コマンド: 定時チェックの時刻を設定
     if (commandName === "check-time") {
       const hour = interaction.options.getInteger("hour");
