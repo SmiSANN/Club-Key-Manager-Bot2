@@ -25,13 +25,13 @@ import {
 } from "../services/reminderService";
 import { schedule20OClockCheck } from "../services/scheduledCheck";
 import { client } from "../discord/client";
-import { mapButtons, borrow_button, mapPresence } from "../discord/discordUI";
+import { mapButtons, borrowButton, mapPresence } from "../discord/discordUI";
 
 /**
  * 現在の鍵の状態に応じたボタンを取得するヘルパー関数
  */
-export const getKeyButtonsForCommand = (var_status: Key) => {
-  const buttons = mapButtons.get(var_status);
+export const getKeyButtonsForCommand = (keyStatus: Key) => {
+  const buttons = mapButtons.get(keyStatus);
   return buttons || mapButtons.get("RETURN")!;
 };
 
@@ -41,12 +41,12 @@ export const getKeyButtonsForCommand = (var_status: Key) => {
  */
 export const handleBorrowCommand = async (
   interaction: ChatInputCommandInteraction,
-  var_status: Key
+  keyStatus: Key
 ): Promise<Key> => {
   const delayMinutes = interaction.options.getInteger("delay-minutes");
 
   // 鍵が返却済みの状態なら借りることができる
-  if (var_status === "RETURN") {
+  if (keyStatus === "RETURN") {
     // 鍵の状態を「借りた」に変更
     const newStatus: Key = "BORROW";
 
@@ -99,7 +99,7 @@ export const handleBorrowCommand = async (
           interaction.channelId,
           newStatus,
           mapButtons,
-          borrow_button
+          borrowButton
         );
       }, delayMs);
 
@@ -135,7 +135,7 @@ export const handleBorrowCommand = async (
     }
 
     return newStatus;
-  } else if (borrowerInfo && (var_status === "BORROW" || var_status === "OPEN" || var_status === "CLOSE")) {
+  } else if (borrowerInfo && (keyStatus === "BORROW" || keyStatus === "OPEN" || keyStatus === "CLOSE")) {
     // 既に借りている状態でコマンド実行 → リマインダー開始時間を更新
     const delayMs = (delayMinutes ?? reminderTimeMinutes) * 60 * 1000;
 
@@ -151,9 +151,9 @@ export const handleBorrowCommand = async (
         borrowerInfo!.userId,
         borrowerInfo!.username,
         borrowerInfo!.channelId,
-        var_status,
+        keyStatus,
         mapButtons,
-        borrow_button
+        borrowButton
       );
     }, delayMs);
 
@@ -166,21 +166,21 @@ export const handleBorrowCommand = async (
 
     await interaction.reply({
       content: `リマインダー開始時間を${delayMinutes ?? reminderTimeMinutes}分後に設定しました。`,
-      components: [getKeyButtonsForCommand(var_status)],
+      components: [getKeyButtonsForCommand(keyStatus)],
     });
 
     console.log(
       `リマインダー開始時間を${delayMinutes ?? reminderTimeMinutes}分後に更新しました。`
     );
 
-    return var_status;
+    return keyStatus;
   } else {
     // 無効な状態
     await interaction.reply({
       content: "❌ 無効な状態です。",
-      components: [getKeyButtonsForCommand(var_status)],
+      components: [getKeyButtonsForCommand(keyStatus)],
     });
-    return var_status;
+    return keyStatus;
   }
 };
 
@@ -190,12 +190,12 @@ export const handleBorrowCommand = async (
  */
 export const handleReminderCommand = async (
   interaction: ChatInputCommandInteraction,
-  var_status: Key
+  keyStatus: Key
 ): Promise<void> => {
   const newState = toggleReminderEnabled();
   await interaction.reply({
     content: `リマインダー機能を${newState ? "ON" : "OFF"}にしました。`,
-    components: [getKeyButtonsForCommand(var_status)],
+    components: [getKeyButtonsForCommand(keyStatus)],
   });
   console.log(`リマインダー機能: ${newState ? "ON" : "OFF"}`);
 };
@@ -206,12 +206,12 @@ export const handleReminderCommand = async (
  */
 export const handleScheduledCheckCommand = async (
   interaction: ChatInputCommandInteraction,
-  var_status: Key
+  keyStatus: Key
 ): Promise<void> => {
   const newState = toggleScheduledCheckEnabled();
   await interaction.reply({
     content: `定時チェック機能を${newState ? "ON" : "OFF"}にしました。`,
-    components: [getKeyButtonsForCommand(var_status)],
+    components: [getKeyButtonsForCommand(keyStatus)],
   });
   console.log(`定時チェック機能: ${newState ? "ON" : "OFF"}`);
 };
@@ -222,23 +222,23 @@ export const handleScheduledCheckCommand = async (
  */
 export const handleReminderTimeCommand = async (
   interaction: ChatInputCommandInteraction,
-  var_status: Key
+  keyStatus: Key
 ): Promise<void> => {
   const minutes = interaction.options.getInteger("minutes");
   if (minutes) {
     setReminderTimeMinutes(minutes);
 
     // 鍵が借りられている場合、リマインダーを再スケジュール
-    if (borrowerInfo && var_status !== "RETURN") {
-      rescheduleReminderTimer(client, var_status, mapButtons, borrow_button);
+    if (borrowerInfo && keyStatus !== "RETURN") {
+      rescheduleReminderTimer(client, keyStatus, mapButtons, borrowButton);
       await interaction.reply({
         content: `リマインダー送信時間を${minutes}分に設定しました。`,
-        components: [getKeyButtonsForCommand(var_status)],
+        components: [getKeyButtonsForCommand(keyStatus)],
       });
     } else {
       await interaction.reply({
         content: `リマインダー間隔を${minutes}分に設定しました。`,
-        components: [getKeyButtonsForCommand(var_status)],
+        components: [getKeyButtonsForCommand(keyStatus)],
       });
     }
 
@@ -252,7 +252,7 @@ export const handleReminderTimeCommand = async (
  */
 export const handleCheckTimeCommand = async (
   interaction: ChatInputCommandInteraction,
-  var_status: Key
+  keyStatus: Key
 ): Promise<void> => {
   const hour = interaction.options.getInteger("hour");
   const minute = interaction.options.getInteger("minute");
@@ -260,11 +260,11 @@ export const handleCheckTimeCommand = async (
     setCheckTime(hour, minute);
 
     // スケジュールを即座に再設定
-    schedule20OClockCheck(client, var_status, mapButtons, borrow_button);
+    schedule20OClockCheck(client, keyStatus, mapButtons, borrowButton);
 
     await interaction.reply({
       content: `定時チェック時刻を${hour}時${minute}分に設定しました。`,
-      components: [getKeyButtonsForCommand(var_status)],
+      components: [getKeyButtonsForCommand(keyStatus)],
     });
     console.log(`定時チェック時刻: ${hour}時${minute}分に変更し、スケジュールを再設定しました。`);
   }
@@ -276,7 +276,7 @@ export const handleCheckTimeCommand = async (
  */
 export const handleStatusCommand = async (
   interaction: ChatInputCommandInteraction,
-  var_status: Key
+  keyStatus: Key
 ): Promise<void> => {
   const statusEmbed = new EmbedBuilder()
     .setColor(0x00ff00)
@@ -291,7 +291,7 @@ export const handleStatusCommand = async (
 
   await interaction.reply({
     embeds: [statusEmbed],
-    components: [getKeyButtonsForCommand(var_status)],
+    components: [getKeyButtonsForCommand(keyStatus)],
   });
 };
 
@@ -301,13 +301,13 @@ export const handleStatusCommand = async (
  */
 export const handleOwnerCommand = async (
   interaction: ChatInputCommandInteraction,
-  var_status: Key
+  keyStatus: Key
 ): Promise<void> => {
   // 鍵が借りられているかチェック
-  if (var_status === "RETURN" || !borrowerInfo) {
+  if (keyStatus === "RETURN" || !borrowerInfo) {
     await interaction.reply({
       content: "❌ 現在、鍵は借りられていません。",
-      components: [getKeyButtonsForCommand(var_status)],
+      components: [getKeyButtonsForCommand(keyStatus)],
     });
     return;
   }
@@ -317,7 +317,7 @@ export const handleOwnerCommand = async (
   if (!newOwner) {
     await interaction.reply({
       content: "❌ ユーザーが指定されていません。",
-      components: [getKeyButtonsForCommand(var_status)],
+      components: [getKeyButtonsForCommand(keyStatus)],
     });
     return;
   }
@@ -341,9 +341,9 @@ export const handleOwnerCommand = async (
         newOwner.id,
         newOwnerName,
         interaction.channelId!,
-        var_status,
+        keyStatus,
         mapButtons,
-        borrow_button
+        borrowButton
       );
     }, reminderTimeMinutes * 60 * 1000);
 
@@ -386,6 +386,6 @@ export const handleOwnerCommand = async (
 
   await interaction.reply({
     embeds: [changeEmbed],
-    components: [getKeyButtonsForCommand(var_status)],
+    components: [getKeyButtonsForCommand(keyStatus)],
   });
 };

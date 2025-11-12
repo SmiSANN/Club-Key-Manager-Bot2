@@ -6,7 +6,7 @@
 import { ButtonInteraction, EmbedBuilder } from "discord.js";
 import { Key } from "../types";
 import { isKey } from "../utils";
-import { mapButtons, mapLabel, mapOpers, mapPresence, borrow_button } from "../discord/discordUI";
+import { mapButtons, mapLabel, mapOpers, mapPresence, borrowButton } from "../discord/discordUI";
 import {
   sendReminderMessage,
   clearReminderTimer,
@@ -19,16 +19,16 @@ import { client } from "../discord/client";
 /**
  * ボタンインタラクションを処理する関数
  * @param interaction - ボタンインタラクション
- * @param var_status - 現在の鍵の状態
+ * @param keyStatus - 現在の鍵の状態
  * @returns 更新後の鍵の状態
  */
 export const handleButtonInteraction = async (
   interaction: ButtonInteraction,
-  var_status: Key
+  keyStatus: Key
 ): Promise<Key> => {
   // 現在の鍵の状態がKey型かどうかを確認
-  if (!isKey(var_status)) {
-    throw Error("var_status is not apropriate");
+  if (!isKey(keyStatus)) {
+    throw Error("keyStatus is not apropriate");
   }
 
   // 押されたボタンのカスタムIDを取得
@@ -46,7 +46,7 @@ export const handleButtonInteraction = async (
   }
 
   // 操作を実行して鍵の状態を更新
-  const newStatus = oper(var_status);
+  const newStatus = oper(keyStatus);
 
   // 更新後の状態に対応するボタンセットを取得
   const buttonSet = mapButtons.get(newStatus);
@@ -135,7 +135,7 @@ export const handleButtonInteraction = async (
           interaction.channelId,
           newStatus,
           mapButtons,
-          borrow_button
+          borrowButton
         );
       }, reminderTimeMinutes * 60 * 1000);
 

@@ -13,18 +13,18 @@ export let borrowerInfo: BorrowerInfo | null = null;
  * @param userId - メッセージを送信するユーザーのDiscord ID
  * @param username - ユーザー名
  * @param channelId - メッセージを送信するチャンネルのID
- * @param var_status - 現在の鍵の状態
+ * @param keyStatus - 現在の鍵の状態
  * @param mapButtons - 鍵の状態とボタンのマップ
- * @param borrow_button - 借りるボタン
+ * @param borrowButton - 借りるボタン
  */
 export const sendReminderMessage = async (
   client: any,
   userId: string,
   username: string,
   channelId: string,
-  var_status: Key,
+  keyStatus: Key,
   mapButtons: Map<Key, ActionRowBuilder<ButtonBuilder>>,
-  borrow_button: ButtonBuilder
+  borrowButton: ButtonBuilder
 ) => {
   // リマインダー機能がOFFの場合は送信しない
   if (!isReminderEnabled) {
@@ -56,7 +56,7 @@ export const sendReminderMessage = async (
         .setTimestamp();
 
       // 現在の鍵の状態に応じたボタンセットを取得
-      const currentButtonSet = mapButtons.get(var_status) || new ActionRowBuilder<ButtonBuilder>().addComponents(borrow_button);
+      const currentButtonSet = mapButtons.get(keyStatus) || new ActionRowBuilder<ButtonBuilder>().addComponents(borrowButton);
 
       // メッセージを送信
       await (channel as TextChannel).send({
@@ -68,16 +68,16 @@ export const sendReminderMessage = async (
       console.log(`リマインダーを送信しました (${count}回目)`);
 
       // 次のリマインダーをスケジュール（リマインダー機能がONで、まだ返却されていない場合）
-      if (borrowerInfo && isReminderEnabled && var_status !== "RETURN") {
+      if (borrowerInfo && isReminderEnabled && keyStatus !== "RETURN") {
         const timerId = setTimeout(() => {
           sendReminderMessage(
             client,
             borrowerInfo!.userId,
             borrowerInfo!.username,
             borrowerInfo!.channelId,
-            var_status,
+            keyStatus,
             mapButtons,
-            borrow_button
+            borrowButton
           );
         }, reminderTimeMinutes * 60 * 1000); // 分をミリ秒に変換
 
@@ -106,15 +106,15 @@ export const clearReminderTimer = () => {
  * リマインダー間隔が変更された時などに呼び出される
  * 
  * @param client - Discordクライアント
- * @param var_status - 現在の鍵の状態
+ * @param keyStatus - 現在の鍵の状態
  * @param mapButtons - 鍵の状態とボタンのマップ
- * @param borrow_button - 借りるボタン
+ * @param borrowButton - 借りるボタン
  */
 export const rescheduleReminderTimer = (
   client: any,
-  var_status: Key,
+  keyStatus: Key,
   mapButtons: Map<Key, ActionRowBuilder<ButtonBuilder>>,
-  borrow_button: ButtonBuilder
+  borrowButton: ButtonBuilder
 ) => {
   // 借りている人がいない、またはリマインダーがOFFの場合は何もしない
   if (!borrowerInfo || !isReminderEnabled) {
@@ -144,9 +144,9 @@ export const rescheduleReminderTimer = (
         borrowerInfo!.userId,
         borrowerInfo!.username,
         borrowerInfo!.channelId,
-        var_status,
+        keyStatus,
         mapButtons,
-        borrow_button
+        borrowButton
       );
     }, remainingMinutes * 60 * 1000);
 
@@ -160,9 +160,9 @@ export const rescheduleReminderTimer = (
       borrowerInfo.userId,
       borrowerInfo.username,
       borrowerInfo.channelId,
-      var_status,
+      keyStatus,
       mapButtons,
-      borrow_button
+      borrowButton
     );
   }
 };

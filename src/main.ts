@@ -5,9 +5,9 @@
 
 import { Events, REST, Routes, TextChannel } from "discord.js";
 import { client } from "./discord/client";
-import { token, id_log_channel } from "./config";
+import { token, idLogChannel } from "./config";
 import { commands } from "./discord/commands";
-import { mapButtons, borrow_button } from "./discord/discordUI";
+import { mapButtons, borrowButton } from "./discord/discordUI";
 import { schedule20OClockCheck } from "./services/scheduledCheck";
 import {
   handleBorrowCommand,
@@ -22,7 +22,7 @@ import { handleButtonInteraction } from "./handlers/buttonHandlers";
 import { Key } from "./types";
 
 // 現在の鍵の状態を格納する変数（初期状態は返却済み）
-let var_status: Key = "RETURN";
+let keyStatus: Key = "RETURN";
 
 /**
  * ボットが起動した時のイベントハンドラー
@@ -58,15 +58,15 @@ client.once("ready", async (bot) => {
   }
 
   // 定時チェック（デフォルトは20時）をスケジュール
-  schedule20OClockCheck(client, var_status, mapButtons, borrow_button);
+  schedule20OClockCheck(client, keyStatus, mapButtons, borrowButton);
 
   // 鍵管理用チャンネルに初期メッセージを送信
-  if (id_log_channel) {
+  if (idLogChannel) {
     // 返却済み状態のボタンセット（「借りる」ボタン）を取得
     const initialButtonSet = mapButtons.get("RETURN");
     if (initialButtonSet) {
       // チャンネルにメッセージを送信
-      (bot.channels?.cache.get(id_log_channel) as TextChannel).send({
+      (bot.channels?.cache.get(idLogChannel) as TextChannel).send({
         content: "鍵管理Botです. 鍵をに対する操作を選んでください.",
         components: [initialButtonSet],
       });
@@ -86,25 +86,25 @@ client.on(Events.InteractionCreate, async (interaction) => {
 
     switch (commandName) {
       case "borrow":
-        var_status = await handleBorrowCommand(interaction, var_status);
+        keyStatus = await handleBorrowCommand(interaction, keyStatus);
         break;
       case "reminder":
-        await handleReminderCommand(interaction, var_status);
+        await handleReminderCommand(interaction, keyStatus);
         break;
       case "scheduled-check":
-        await handleScheduledCheckCommand(interaction, var_status);
+        await handleScheduledCheckCommand(interaction, keyStatus);
         break;
       case "reminder-time":
-        await handleReminderTimeCommand(interaction, var_status);
+        await handleReminderTimeCommand(interaction, keyStatus);
         break;
       case "check-time":
-        await handleCheckTimeCommand(interaction, var_status);
+        await handleCheckTimeCommand(interaction, keyStatus);
         break;
       case "status":
-        await handleStatusCommand(interaction, var_status);
+        await handleStatusCommand(interaction, keyStatus);
         break;
       case "owner":
-        await handleOwnerCommand(interaction, var_status);
+        await handleOwnerCommand(interaction, keyStatus);
         break;
       default:
         console.log(`未知のコマンド: ${commandName}`);
@@ -116,7 +116,7 @@ client.on(Events.InteractionCreate, async (interaction) => {
   // ボタンクリックの処理
   // ==============================
   if (interaction.isButton()) {
-    var_status = await handleButtonInteraction(interaction, var_status);
+    keyStatus = await handleButtonInteraction(interaction, keyStatus);
   }
 });
 

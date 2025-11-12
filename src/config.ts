@@ -8,12 +8,12 @@ export const settings = JSON.parse(
 );
 
 // 設定ファイルから値を取得
-export const id_log_channel = settings.LogChannel; // ログを送信するDiscordチャンネルのID
+export const idLogChannel = settings.LogChannel; // ログを送信するDiscordチャンネルのID
 export const token = settings.Token; // Discordボットのトークン
 
 // 操作卓モードかどうかを設定ファイルから取得
 // 操作卓モードの場合、鍵の「開ける」「閉める」操作が無効になる
-export const mode_console = string2boolean(settings.ModeConsole);
+export const modeConsole = string2boolean(settings.ModeConsole);
 
 // 鍵の返却リマインダー時間（分）、デフォルトは60分
 export let reminderTimeMinutes = settings.ReminderTimeMinutes || 60;
