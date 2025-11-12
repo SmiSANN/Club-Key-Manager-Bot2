@@ -4,9 +4,5 @@
     "ModeConsole": "false",
     "ReminderTimeMinutes": 180,
     "checkHour": 20,
-    "checkMinute": 0,
-    "Slack": {
-        "Use": "false",
-        "WebhookUrl": ""
-    }
+    "checkMinute": 0
 }

@@ -15,7 +15,6 @@ import {
 } from "discord.js";
 import fs from "fs"; // ファイルシステム操作用
 import path from "path"; // ファイルパス操作用
-// import { messagingSlack, createMessage } from "./slack"; // Slack連携機能（現在はコメントアウト）
 
 // 設定ファイル（setting.json）を読み込んでパース
 const settings = JSON.parse(
@@ -48,8 +47,6 @@ const string2boolean = (value: string | null | undefined): boolean => {
 // 操作卓モードかどうかを設定ファイルから取得
 // 操作卓モードの場合、鍵の「開ける」「閉める」操作が無効になる
 const mode_console = string2boolean(settings.ModeConsole);
-
-// const isUseSlack = string2boolean(settings.Slack.Use); // Slack連携の有効/無効（現在はコメントアウト）
 
 // 鍵の返却リマインダー時間（分）、デフォルトは60分
 let reminderTimeMinutes = settings.ReminderTimeMinutes || 60;
@@ -178,13 +175,6 @@ const sendReminderMessage = async (
 
       console.log(`リマインダーを送信しました (${count}回目)`);
 
-      // Slack通知も送る（現在はコメントアウト）
-      // if (isUseSlack) {
-      //   messagingSlack(
-      //     `${username}さんへ (${count}回目): 鍵を借りてから${reminderTimeMinutes * count}分が経過しました。返却をお願いします。`
-      //   )(settings.Slack.WebhookUrl);
-      // }
-
       // 次のリマインダーをスケジュール（リマインダー機能がONで、まだ返却されていない場合）
       if (borrowerInfo && isReminderEnabled && var_status !== "RETURN") {
         const timerId = setTimeout(() => {
@@ -300,13 +290,6 @@ const check20OClock = async () => {
         });
 
         console.log(`定時チェック: ${borrowerInfo.username}に返却リマインダーを送信しました。`);
-
-        // Slack通知も送る（現在はコメントアウト）
-        // if (isUseSlack) {
-        //   messagingSlack(
-        //     `【定時確認】${borrowerInfo.username}さんへ: 鍵がまだ返却されていません。返却をお願いします。`
-        //   )(settings.Slack.WebhookUrl);
-        // }
       }
     } catch (error) {
       console.error("定時チェックメッセージの送信に失敗しました:", error);
@@ -1131,11 +1114,6 @@ client.on(Events.InteractionCreate, async (interaction) => {
     clearReminderTimer();
     console.log(`鍵が返却されました。リマインダータイマーをクリアしました。`);
   }
-
-  // Slack通知（現在はコメントアウト）
-  // if (isUseSlack) {
-  //   messagingSlack(createMessage(username)(label))(settings.Slack.WebhookUrl);
-  // }
 });
 
 // Discordボットにログイン
