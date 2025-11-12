@@ -6,4 +6,4 @@ services:
     container_name: club-key-manager-bot
     restart: unless-stopped
     volumes:
-      - ./src/setting.json:/app/src/setting.json:ro
+      - ./src/settings.json:/app/src/settings.json:ro
