@@ -84,26 +84,30 @@ docker-compose restart
 - `/status` : 現在のアラーム設定を表示
 - `/owner @ユーザー` : 鍵の持ち主を変更
 
+## ファイル構成
+
+```
+src/
+├── main.ts                 # エントリーポイント
+├── types.ts                # 型定義
+├── config.ts               # 設定管理
+├── utils.ts                # ユーティリティ関数
+├── services/
+│   ├── keyOperations.ts    # 鍵操作ロジック
+│   ├── reminderService.ts  # リマインダー管理
+│   └── scheduledCheck.ts   # 定時チェック
+├── discord/
+│   ├── client.ts           # Discordクライアント初期化
+│   ├── discordUI.ts        # ボタン・UI定義
+│   └── commands.ts         # スラッシュコマンド
+└── setting.json            # 設定ファイル（要作成）
+```
+
 ## 環境変数・セキュリティ
 - **Token は絶対に Git にコミットしないでください** 
   - `src/.gitignore` に `setting.json` が登録されています
   - `src/setting.json.sample` をテンプレートとして使用してください
 - Token が漏洩した場合は、Discord 開発者ポータルで即座に再生成してください
 
-ファイル構成
-src/
-├── main.ts                 # エントリーポイント
-├── types.ts               # 型定義
-├── config.ts              # 設定管理
-├── utils.ts               # ユーティリティ関数
-├── services/
-│   ├── keyOperations.ts   # 鍵操作ロジック
-│   ├── reminderService.ts # リマインダー管理
-│   └── scheduledCheck.ts  # 定時チェック
-├── discord/
-│   ├── client.ts          # Discordクライアント初期化
-│   ├── discordUI.ts       # ボタン・UI定義
-│   ├── commands.ts        # スラッシュコマンド
-│   └── eventHandlers.ts   # イベントハンドラー
-└── setting.json
+
 
