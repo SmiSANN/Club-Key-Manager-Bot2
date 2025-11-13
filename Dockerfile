@@ -1,4 +1,4 @@
-FROM node:18-slim
+FROM node:24-slim
 
 # タイムゾーンを日本時間に設定
 ENV TZ=Asia/Tokyo
