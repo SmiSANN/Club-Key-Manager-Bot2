@@ -95,7 +95,6 @@ export const handleBorrowCommand = async (
         sendReminderMessage(
           client,
           interaction.user.id,
-          username,
           interaction.channelId,
           mapButtons,
           borrowButton
@@ -148,7 +147,6 @@ export const handleBorrowCommand = async (
       sendReminderMessage(
         client,
         borrowerInfo!.userId,
-        borrowerInfo!.username,
         borrowerInfo!.channelId,
         mapButtons,
         borrowButton
@@ -336,7 +334,6 @@ export const handleOwnerCommand = async (
       sendReminderMessage(
         client,
         newOwner.id,
-        newOwnerName,
         interaction.channelId,
         mapButtons,
         borrowButton

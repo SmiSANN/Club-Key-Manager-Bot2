@@ -129,7 +129,6 @@ export const handleButtonInteraction = async (
         sendReminderMessage(
           client,
           interaction.user.id,
-          username,
           interaction.channelId,
           mapButtons,
           borrowButton

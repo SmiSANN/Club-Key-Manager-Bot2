@@ -48,7 +48,7 @@ export const check20OClock = async (
         const currentButtonSet = mapButtons.get(keyStatus) || new ActionRowBuilder<ButtonBuilder>().addComponents(borrowButton);
 
         // メッセージを送信
-        await (channel as TextChannel).send({
+        await channel.send({
           content: `<@${borrowerInfo.userId}>`, // ユーザーにメンション
           embeds: [embed],
           components: [currentButtonSet], // ボタンも一緒に送信

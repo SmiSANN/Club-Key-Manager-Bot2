@@ -1,8 +1,8 @@
-import { TextChannel, EmbedBuilder, ActionRowBuilder, ButtonBuilder } from "discord.js";
+import { TextChannel, EmbedBuilder, ActionRowBuilder, ButtonBuilder, Channel } from "discord.js";
 import { BorrowerInfo, Key } from "../types";
-import { minutesToMs } from "../utils"; 
+import { minutesToMs, msToMinutes} from "../utils"; 
 import { reminderTimeMinutes, isReminderEnabled } from "../config";
-import { Client} from "discord.js";
+import { Client } from "discord.js";
 import { getKeyStatus } from "../main";
 
 
@@ -24,7 +24,6 @@ export let borrowerInfo: BorrowerInfo | null = null;
 export const sendReminderMessage = async (
   client: Client,
   userId: string,
-  username: string,
   channelId: string,
   mapButtons: Map<Key, ActionRowBuilder<ButtonBuilder>>,
   borrowButton: ButtonBuilder
@@ -56,7 +55,7 @@ export const sendReminderMessage = async (
   
   try {
     // チャンネルを取得
-    const channel = await client.channels.fetch(channelId);
+    const channel: Channel | null = await client.channels.fetch(channelId);
     if (channel && channel.isTextBased()) {
       // 埋め込みメッセージを作成
       const embed = new EmbedBuilder()
@@ -71,7 +70,7 @@ export const sendReminderMessage = async (
       const currentButtonSet = mapButtons.get(keyStatus) || new ActionRowBuilder<ButtonBuilder>().addComponents(borrowButton);
 
       // メッセージを送信
-      await (channel as TextChannel).send({
+      await channel.send({
         content: `<@${userId}>`, // ユーザーにメンション
         embeds: [embed],
         components: [currentButtonSet], // ボタンも一緒に送信
@@ -85,7 +84,6 @@ export const sendReminderMessage = async (
           sendReminderMessage(
             client,
             borrowerInfo!.userId,
-            borrowerInfo!.username,
             borrowerInfo!.channelId,
             mapButtons,
             borrowButton
@@ -137,7 +135,7 @@ export const rescheduleReminderTimer = (
 
   // 借りてからの経過時間を計算（分単位）
   const now = Date.now();
-  const elapsedMinutes = (now - borrowerInfo.borrowedAt) / 1000 / 60;
+  const elapsedMinutes = msToMinutes(now - borrowerInfo.borrowedAt);
   
   // 次のリマインダーまでの時間を計算
   const nextReminderAt = (borrowerInfo.reminderCount + 1) * reminderTimeMinutes;
@@ -151,7 +149,6 @@ export const rescheduleReminderTimer = (
       sendReminderMessage(
         client,
         borrowerInfo!.userId,
-        borrowerInfo!.username,
         borrowerInfo!.channelId,
         mapButtons,
         borrowButton
@@ -166,7 +163,6 @@ export const rescheduleReminderTimer = (
     sendReminderMessage(
       client,
       borrowerInfo.userId,
-      borrowerInfo.username,
       borrowerInfo.channelId,
       mapButtons,
       borrowButton
