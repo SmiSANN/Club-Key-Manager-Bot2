@@ -1,4 +1,4 @@
-import { TextChannel, EmbedBuilder, ActionRowBuilder, ButtonBuilder } from "discord.js";
+import { TextChannel, EmbedBuilder, ActionRowBuilder, ButtonBuilder, Colors } from "discord.js";
 import { Key } from "../types";
 import { checkHour, checkMinute, isScheduledCheckEnabled } from "../config";
 import { borrowerInfo } from "./reminderService";
@@ -37,7 +37,7 @@ export const check20OClock = async (
       if (channel && channel.isTextBased()) {
         // 埋め込みメッセージを作成
         const embed = new EmbedBuilder()
-          .setColor(0xff0000) // 赤色で警告を表現
+          .setColor(Colors.Gold) // 黄色で警告を表現
           .setTitle("⏰️鍵返却確認")
           .setDescription(
             `<@${borrowerInfo.userId}> さん、定時になりましたが鍵がまだ返却されていません。\nemail：jm-hcgakusei@stf.teu.ac.jp`

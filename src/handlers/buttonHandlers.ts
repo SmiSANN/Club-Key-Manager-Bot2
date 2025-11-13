@@ -5,7 +5,8 @@
 
 import { ButtonInteraction, Colors, EmbedBuilder } from "discord.js";
 import { Key } from "../types";
-import { isKey ,minutesToMs} from "../utils";
+import { isKey, minutesToMs } from "../utils";
+import { getUserInfo } from "./handlerUtils";
 import { mapButtons, mapLabel, mapOpers, mapPresence, borrowButton } from "../discord/discordUI";
 import {
   sendReminderMessage,
@@ -67,11 +68,10 @@ export const handleButtonInteraction = async (
 
   // ボットのステータスを更新
   interaction.client.user.setPresence(presence);
-
+  
   // ユーザー情報を取得
-  const username = interaction.user.username;
-  const userIconUrl = interaction.user.avatarURL();
-
+  const { username, userIconUrl } = getUserInfo(interaction);
+  
   // 鍵操作の結果を表示する埋め込みメッセージを作成
   const embed = new EmbedBuilder()
     .setColor(Colors.Green)
