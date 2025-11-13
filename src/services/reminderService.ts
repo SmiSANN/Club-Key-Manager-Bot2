@@ -1,7 +1,7 @@
-import { TextChannel, EmbedBuilder, ActionRowBuilder, ButtonBuilder, Channel, Colors } from "discord.js";
+import { EmbedBuilder, ActionRowBuilder, ButtonBuilder, Channel, Colors } from "discord.js";
 import { BorrowerInfo, Key } from "../types";
-import { minutesToMs, msToMinutes} from "../utils"; 
-import { reminderTimeMinutes, isReminderEnabled } from "../config";
+import { minutesToMs, msToMinutes} from "../utils";
+import { config } from "../config";
 import { Client } from "discord.js";
 import { getKeyStatus } from "../main";
 
@@ -38,7 +38,7 @@ export const sendReminderMessage = async (
   }
   
   // リマインダー機能がOFFの場合は送信しない
-  if (!isReminderEnabled) {
+  if (!config.isReminderEnabled) {
     console.log("リマインダー機能がOFFのため、送信をスキップしました。");
     return;
   }
@@ -62,7 +62,7 @@ export const sendReminderMessage = async (
         .setColor(Colors.Gold) // 黄色で警告を表現
         .setTitle(`⌛️返却リマインダー (${count}回目)`)
         .setDescription(
-          `<@${userId}> さん、鍵を借りてから${reminderTimeMinutes * count}分が経過しました。\n返却を忘れていませんか？`
+          `<@${userId}> さん、鍵を借りてから${config.reminderTimeMinutes * count}分が経過しました。\n返却を忘れていませんか？`
         )
         .setTimestamp();
 
@@ -88,10 +88,10 @@ export const sendReminderMessage = async (
             mapButtons,
             borrowButton
           );
-        }, minutesToMs(reminderTimeMinutes)); // 分をミリ秒に変換
+        }, minutesToMs(config.reminderTimeMinutes)); // 分をミリ秒に変換
 
         borrowerInfo.timerId = timerId;
-        console.log(`次のリマインダーを${reminderTimeMinutes}分後にスケジュールしました。`);
+        console.log(`次のリマインダーを${config.reminderTimeMinutes}分後にスケジュールしました。`);
       }
     }
   } catch (error) {
@@ -124,7 +124,7 @@ export const rescheduleReminderTimer = (
   borrowButton: ButtonBuilder
 ) => {
   // 借りている人がいない、またはリマインダーがOFFの場合は何もしない
-  if (!borrowerInfo || !isReminderEnabled) {
+  if (!borrowerInfo || !config.isReminderEnabled) {
     return;
   }
 
@@ -138,7 +138,7 @@ export const rescheduleReminderTimer = (
   const elapsedMinutes = msToMinutes(now - borrowerInfo.borrowedAt);
   
   // 次のリマインダーまでの時間を計算
-  const nextReminderAt = (borrowerInfo.reminderCount + 1) * reminderTimeMinutes;
+  const nextReminderAt = (borrowerInfo.reminderCount + 1) * config.reminderTimeMinutes;
   const remainingMinutes = nextReminderAt - elapsedMinutes;
 
   console.log(`経過時間: ${Math.floor(elapsedMinutes)}分, 次のリマインダーまで: ${Math.floor(remainingMinutes)}分 (${borrowerInfo.reminderCount + 1}回目)`);

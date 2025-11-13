@@ -15,27 +15,30 @@ export const token = settings.Token; // Discordボットのトークン
 // 操作卓モードの場合、鍵の「開ける」「閉める」操作が無効になる
 export const modeConsole = string2boolean(settings.ModeConsole);
 
-// 鍵の返却リマインダー時間（分）、デフォルトは60分
-export let reminderTimeMinutes = settings.ReminderTimeMinutes || 60;
-
-// 定時チェックの時刻（時）、デフォルトは20時
-export let checkHour = settings.checkHour || 20;
-
-// 定時チェックの時刻（分）、デフォルトは0分
-export let checkMinute = settings.checkMinute || 0;
-
-// リマインダー機能のON/OFF（初期状態はON）
-export let isReminderEnabled = true;
-
-// 定時チェック機能のON/OFF（初期状態はON）
-export let isScheduledCheckEnabled = true;
+// 動的に変更可能な設定値をオブジェクトでラップ
+export const config = {
+  // 鍵の返却リマインダー時間（分）、デフォルトは60分
+  reminderTimeMinutes: settings.ReminderTimeMinutes || 60,
+  
+  // 定時チェックの時刻（時）、デフォルトは20時
+  checkHour: settings.checkHour || 20,
+  
+  // 定時チェックの時刻（分）、デフォルトは0分
+  checkMinute: settings.checkMinute || 0,
+  
+  // リマインダー機能のON/OFF（初期状態はON）
+  isReminderEnabled: true,
+  
+  // 定時チェック機能のON/OFF（初期状態はON）
+  isScheduledCheckEnabled: true,
+};
 
 /**
  * リマインダー時間を更新する関数
  * @param minutes - 新しいリマインダー時間（分）
  */
 export const setReminderTimeMinutes = (minutes: number) => {
-  reminderTimeMinutes = minutes;
+  config.reminderTimeMinutes = minutes;
 };
 
 /**
@@ -44,22 +47,22 @@ export const setReminderTimeMinutes = (minutes: number) => {
  * @param minute - 分（0-59）
  */
 export const setCheckTime = (hour: number, minute: number) => {
-  checkHour = hour;
-  checkMinute = minute;
+  config.checkHour = hour;
+  config.checkMinute = minute;
 };
 
 /**
  * リマインダー機能のON/OFFを切り替える関数
  */
 export const toggleReminderEnabled = () => {
-  isReminderEnabled = !isReminderEnabled;
-  return isReminderEnabled;
+  config.isReminderEnabled = !config.isReminderEnabled;
+  return config.isReminderEnabled;
 };
 
 /**
  * 定時チェック機能のON/OFFを切り替える関数
  */
 export const toggleScheduledCheckEnabled = () => {
-  isScheduledCheckEnabled = !isScheduledCheckEnabled;
-  return isScheduledCheckEnabled;
+  config.isScheduledCheckEnabled = !config.isScheduledCheckEnabled;
+  return config.isScheduledCheckEnabled;
 };

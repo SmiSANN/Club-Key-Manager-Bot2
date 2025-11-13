@@ -1,6 +1,6 @@
-import { TextChannel, EmbedBuilder, ActionRowBuilder, ButtonBuilder, Colors } from "discord.js";
+import { EmbedBuilder, ActionRowBuilder, ButtonBuilder, Colors } from "discord.js";
 import { Key } from "../types";
-import { checkHour, checkMinute, isScheduledCheckEnabled } from "../config";
+import { config } from "../config";
 import { borrowerInfo } from "./reminderService";
 import { Client} from "discord.js";
 import { getKeyStatus } from "../main";
@@ -25,7 +25,7 @@ export const check20OClock = async (
   // 常に最新の鍵の状態を取得
   const keyStatus = getKeyStatus();
   // 定時チェック機能がOFFの場合は何もしない
-  if (!isScheduledCheckEnabled) {
+  if (!config.isScheduledCheckEnabled) {
     console.log("定時チェック機能がOFFのため、チェックをスキップしました。");
     return;
   }
@@ -72,7 +72,7 @@ export const check20OClock = async (
 export const getMillisecondsUntil20OClock = (): number => {
   const now = new Date();
   const target = new Date();
-  target.setHours(checkHour, checkMinute, 0, 0); // 設定された時刻に設定
+  target.setHours(config.checkHour, config.checkMinute, 0, 0); // 設定された時刻に設定
 
   console.log(`現在時刻: ${now.toLocaleString('ja-JP')}`);
   console.log(`ターゲット時刻: ${target.toLocaleString('ja-JP')}`);
@@ -80,7 +80,7 @@ export const getMillisecondsUntil20OClock = (): number => {
 
   // もし現在時刻が既に設定時刻を過ぎていたら、翌日の設定時刻に設定
   if (now.getTime() >= target.getTime()) {
-    console.log(`${checkHour}時${checkMinute}分を過ぎているため、翌日の${checkHour}時${checkMinute}分に設定します`);
+    console.log(`${config.checkHour}時${config.checkMinute}分を過ぎているため、翌日の${config.checkHour}時${config.checkMinute}分に設定します`);
     target.setDate(target.getDate() + 1);
     console.log(`新しいターゲット時刻: ${target.toLocaleString('ja-JP')}`);
   }
@@ -114,7 +114,7 @@ export const schedule20OClockCheck = (
   const scheduleNext = () => {
     const msUntil20 = getMillisecondsUntil20OClock();
     
-    console.log(`次の定時チェックまで: ${Math.round(msToMinutes(msUntil20))}分 (${checkHour}時${checkMinute}分)`);
+    console.log(`次の定時チェックまで: ${Math.round(msUntil20 / 1000 / 60)}分 (${config.checkHour}時${config.checkMinute}分)`);
 
     // タイマーを設定
     scheduledCheckTimerId = setTimeout(() => {
