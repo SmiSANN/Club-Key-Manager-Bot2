@@ -25,6 +25,20 @@ import { Key } from "./types";
 let keyStatus: Key = "RETURN";
 
 /**
+ * 現在の鍵の状態を取得する関数
+ * @returns 現在の鍵の状態
+ */
+export const getKeyStatus = (): Key => keyStatus;
+
+/**
+ * 鍵の状態を設定する関数
+ * @param newStatus 新しい鍵の状態
+ */
+export const setKeyStatus = (newStatus: Key): void => {
+  keyStatus = newStatus;
+};
+
+/**
  * ボットが起動した時のイベントハンドラー
  * 初期設定とスラッシュコマンドの登録を行う
  */
@@ -58,7 +72,7 @@ client.once("ready", async (bot) => {
   }
 
   // 定時チェック（デフォルトは20時）をスケジュール
-  schedule20OClockCheck(client, keyStatus, mapButtons, borrowButton);
+  schedule20OClockCheck(client, mapButtons, borrowButton);
 
   // 鍵管理用チャンネルに初期メッセージを送信
   if (idLogChannel) {
@@ -67,7 +81,7 @@ client.once("ready", async (bot) => {
     if (initialButtonSet) {
       // チャンネルにメッセージを送信
       (bot.channels?.cache.get(idLogChannel) as TextChannel).send({
-        content: "鍵管理Botです. 鍵をに対する操作を選んでください.",
+        content: "鍵管理Botです. 鍵に対する操作を選んでください.",
         components: [initialButtonSet],
       });
     }

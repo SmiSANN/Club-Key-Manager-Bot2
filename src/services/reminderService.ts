@@ -2,6 +2,7 @@ import { TextChannel, EmbedBuilder, ActionRowBuilder, ButtonBuilder } from "disc
 import { BorrowerInfo, Key } from "../types";
 import { reminderTimeMinutes, isReminderEnabled } from "../config";
 import { Client} from "discord.js";
+import { getKeyStatus } from "../main";
 
 
 // 現在鍵を借りているユーザーの情報（借りていない場合はnull）
@@ -24,10 +25,18 @@ export const sendReminderMessage = async (
   userId: string,
   username: string,
   channelId: string,
-  keyStatus: Key,
   mapButtons: Map<Key, ActionRowBuilder<ButtonBuilder>>,
   borrowButton: ButtonBuilder
 ) => {
+  // 常に最新の鍵の状態を取得
+  const keyStatus = getKeyStatus();
+  
+  // 鍵が既に返却されている場合は送信しない
+  if (keyStatus === "RETURN") {
+    console.log("鍵が既に返却されているため、リマインダーを送信しません。");
+    return;
+  }
+  
   // リマインダー機能がOFFの場合は送信しない
   if (!isReminderEnabled) {
     console.log("リマインダー機能がOFFのため、送信をスキップしました。");
@@ -69,15 +78,14 @@ export const sendReminderMessage = async (
 
       console.log(`リマインダーを送信しました (${count}回目)`);
 
-      // 次のリマインダーをスケジュール（リマインダー機能がONで、まだ返却されていない場合）
-      if (borrowerInfo && isReminderEnabled && keyStatus !== "RETURN") {
+      // 次のリマインダーをスケジュール（借りた人の情報がある場合）
+      if (borrowerInfo) {
         const timerId = setTimeout(() => {
           sendReminderMessage(
             client,
             borrowerInfo!.userId,
             borrowerInfo!.username,
             borrowerInfo!.channelId,
-            keyStatus,
             mapButtons,
             borrowButton
           );
@@ -108,13 +116,11 @@ export const clearReminderTimer = () => {
  * リマインダー間隔が変更された時などに呼び出される
  * 
  * @param client - Discordクライアント
- * @param keyStatus - 現在の鍵の状態
  * @param mapButtons - 鍵の状態とボタンのマップ
  * @param borrowButton - 借りるボタン
  */
 export const rescheduleReminderTimer = (
   client: Client,
-  keyStatus: Key,
   mapButtons: Map<Key, ActionRowBuilder<ButtonBuilder>>,
   borrowButton: ButtonBuilder
 ) => {
@@ -146,7 +152,6 @@ export const rescheduleReminderTimer = (
         borrowerInfo!.userId,
         borrowerInfo!.username,
         borrowerInfo!.channelId,
-        keyStatus,
         mapButtons,
         borrowButton
       );
@@ -162,7 +167,6 @@ export const rescheduleReminderTimer = (
       borrowerInfo.userId,
       borrowerInfo.username,
       borrowerInfo.channelId,
-      keyStatus,
       mapButtons,
       borrowButton
     );

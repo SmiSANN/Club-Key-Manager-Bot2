@@ -3,6 +3,7 @@ import { Key, BorrowerInfo } from "../types";
 import { checkHour, checkMinute, isScheduledCheckEnabled } from "../config";
 import { borrowerInfo } from "./reminderService";
 import { Client} from "discord.js";
+import { getKeyStatus } from "../main";
 // 定時チェックのタイマーID
 let scheduledCheckTimerId: ReturnType<typeof setTimeout> | null = null;
 
@@ -12,16 +13,16 @@ let scheduledCheckTimerId: ReturnType<typeof setTimeout> | null = null;
  * 借りているユーザーに通知を送信する
  * 
  * @param client - Discordクライアント
- * @param keyStatus - 現在の鍵の状態
  * @param mapButtons - 鍵の状態とボタンのマップ
  * @param borrowButton - 借りるボタン
  */
 export const check20OClock = async (
   client: Client,
-  keyStatus: Key,
   mapButtons: Map<Key, ActionRowBuilder<ButtonBuilder>>,
   borrowButton: ButtonBuilder
 ) => {
+  // 常に最新の鍵の状態を取得
+  const keyStatus = getKeyStatus();
   // 定時チェック機能がOFFの場合は何もしない
   if (!isScheduledCheckEnabled) {
     console.log("定時チェック機能がOFFのため、チェックをスキップしました。");
@@ -94,13 +95,11 @@ export const getMillisecondsUntil20OClock = (): number => {
  * 設定された時刻に定期的にチェックを実行するようにタイマーを設定する
  * 
  * @param client - Discordクライアント
- * @param keyStatus - 現在の鍵の状態
  * @param mapButtons - 鍵の状態とボタンのマップ
  * @param borrowButton - 借りるボタン
  */
 export const schedule20OClockCheck = (
   client: Client,
-  keyStatus: Key,
   mapButtons: Map<Key, ActionRowBuilder<ButtonBuilder>>,
   borrowButton: ButtonBuilder
 ) => {
@@ -118,7 +117,7 @@ export const schedule20OClockCheck = (
 
     // タイマーを設定
     scheduledCheckTimerId = setTimeout(() => {
-      check20OClock(client, keyStatus, mapButtons, borrowButton); // チェックを実行
+      check20OClock(client, mapButtons, borrowButton); // チェックを実行
       scheduleNext(); // 次の日のチェックをスケジュール
     }, msUntil20);
   };

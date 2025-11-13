@@ -3,7 +3,7 @@
  * 各コマンドの処理ロジックを管理
  */
 
-import { ChatInputCommandInteraction, EmbedBuilder, ActionRowBuilder, ButtonBuilder } from "discord.js";
+import { ChatInputCommandInteraction, EmbedBuilder} from "discord.js";
 import { Key } from "../types";
 import {
   reminderTimeMinutes,
@@ -51,8 +51,7 @@ export const handleBorrowCommand = async (
     const newStatus: Key = "BORROW";
 
     // ユーザー情報を取得
-    const userTag = interaction.user.tag;
-    const username = userTag.split("#")[1] ? interaction.user.username : userTag;
+    const username = interaction.user.username;
     const userIconUrl = interaction.user.avatarURL();
 
     // 埋め込みメッセージを作成
@@ -97,7 +96,6 @@ export const handleBorrowCommand = async (
           interaction.user.id,
           username,
           interaction.channelId,
-          newStatus,
           mapButtons,
           borrowButton
         );
@@ -151,7 +149,6 @@ export const handleBorrowCommand = async (
         borrowerInfo!.userId,
         borrowerInfo!.username,
         borrowerInfo!.channelId,
-        keyStatus,
         mapButtons,
         borrowButton
       );
@@ -230,7 +227,7 @@ export const handleReminderTimeCommand = async (
 
     // 鍵が借りられている場合、リマインダーを再スケジュール
     if (borrowerInfo && keyStatus !== "RETURN") {
-      rescheduleReminderTimer(client, keyStatus, mapButtons, borrowButton);
+      rescheduleReminderTimer(client, mapButtons, borrowButton);
       await interaction.reply({
         content: `リマインダー送信時間を${minutes}分に設定しました。`,
         components: [getKeyButtonsForCommand(keyStatus)],
@@ -260,7 +257,7 @@ export const handleCheckTimeCommand = async (
     setCheckTime(hour, minute);
 
     // スケジュールを即座に再設定
-    schedule20OClockCheck(client, keyStatus, mapButtons, borrowButton);
+    schedule20OClockCheck(client, mapButtons, borrowButton);
 
     await interaction.reply({
       content: `定時チェック時刻を${hour}時${minute}分に設定しました。`,
@@ -325,8 +322,7 @@ export const handleOwnerCommand = async (
   // 旧持ち主の情報を保存
   const oldOwnerName = borrowerInfo.username;
   const oldOwnerId = borrowerInfo.userId;
-  const newOwnerTag = newOwner.tag;
-  const newOwnerName = newOwnerTag.split("#")[1] ? newOwner.username : newOwnerTag;
+  const newOwnerName = newOwner.username;
 
   // 旧持ち主のリマインダータイマーをクリア
   clearReminderTimer();
@@ -341,7 +337,6 @@ export const handleOwnerCommand = async (
         newOwner.id,
         newOwnerName,
         interaction.channelId!,
-        keyStatus,
         mapButtons,
         borrowButton
       );

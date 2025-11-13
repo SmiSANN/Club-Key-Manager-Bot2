@@ -10,7 +10,6 @@ import { mapButtons, mapLabel, mapOpers, mapPresence, borrowButton } from "../di
 import {
   sendReminderMessage,
   clearReminderTimer,
-  borrowerInfo,
   setBorrowerInfo
 } from "../services/reminderService";
 import { reminderTimeMinutes, checkHour, checkMinute, isReminderEnabled, isScheduledCheckEnabled } from "../config";
@@ -70,8 +69,7 @@ export const handleButtonInteraction = async (
   interaction.client.user.setPresence(presence);
 
   // ユーザー情報を取得
-  const userTag = interaction.user.tag;
-  const username = userTag.split("#")[1] ? interaction.user.username : userTag;
+  const username = interaction.user.username;
   const userIconUrl = interaction.user.avatarURL();
 
   // 鍵操作の結果を表示する埋め込みメッセージを作成
@@ -133,7 +131,6 @@ export const handleButtonInteraction = async (
           interaction.user.id,
           username,
           interaction.channelId,
-          newStatus,
           mapButtons,
           borrowButton
         );

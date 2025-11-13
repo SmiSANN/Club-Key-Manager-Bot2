@@ -12,33 +12,32 @@
 
 2. 設定ファイルを作成：
    ```bash
-   cp src/setting.json.sample src/setting.json
+   cp src/settings.json.sample src/settings.json
    ```
-   `src/setting.json` を編集して、Discord Bot Token などを設定してください。
+   `src/settings.json` を編集して、Discord Bot Token などを設定してください。
 
 3. docker-compose で起動：
    ```bash
-   docker-compose up -d
+   docker compose up -d
    ```
 
 4. ログ確認：
    ```bash
-   docker-compose logs -f
+   docker compose logs -f
    ```
    "Ready!" と表示されたら起動完了です。
 
 ### 停止・再起動
 ```bash
 # 停止
-docker-compose down
+docker compose down
 
 # 再起動
-docker-compose restart
+docker compose restart
 ```
    
 ## 設定ファイル
-`src/setting.json` に以下を指定します：
-
+`src/settings.json` に以下を指定します：
 - **LogChannel** : Discord のログチャンネル ID
 - **Token** : Discord Bot トークン（**秘密厳守**）
 - **ModeConsole** : `"true"` または `"false"`。`false` は部室鍵用、`true` は操作卓用
@@ -73,7 +72,6 @@ docker-compose restart
 #### リマインダー設定
 - `/reminder` : リマインダー機能をトグル（ON ↔ OFF）
 - `/reminder-time <分>` : リマインダー間隔を変更（分）
-- `/reminder-time-ms <ミリ秒>` : リマインダー間隔を変更（ミリ秒）
 
 #### 定時チェック設定
 - `/scheduled-check` : 定時チェック機能をトグル（ON ↔ OFF）
@@ -99,15 +97,15 @@ src/
 │   ├── keyOperations.ts   # 鍵操作ロジック
 │   ├── reminderService.ts # リマインダー管理
 │   └── scheduledCheck.ts  # 定時チェック
-└── handlers/ 　　　　　    # インタラクションハンドラー
+└── handlers/              # インタラクションハンドラー
     ├── commandHandlers.ts # スラッシュコマンド処理
     └── buttonHandlers.ts  # ボタンインタラクション処理
 ```
 
 ## 環境変数・セキュリティ
 - **Token は絶対に Git にコミットしないでください**
-  - `src/.gitignore` に `setting.json` が登録されています
-  - `src/setting.json.sample` をテンプレートとして使用してください
+  - `src/.gitignore` に `settings.json` が登録されています
+  - `src/settings.json.sample` をテンプレートとして使用してください
 - Token が漏洩した場合は、Discord 開発者ポータルで即座に再生成してください
 
 
