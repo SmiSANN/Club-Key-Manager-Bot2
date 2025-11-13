@@ -51,5 +51,5 @@
   "forwardPorts": [],
   
   // コンテナ内で実行するユーザー
-  "remoteUser": "node"
+  "remoteUser": "root"
 }
