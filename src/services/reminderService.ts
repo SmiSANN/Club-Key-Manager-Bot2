@@ -1,6 +1,8 @@
 import { TextChannel, EmbedBuilder, ActionRowBuilder, ButtonBuilder } from "discord.js";
 import { BorrowerInfo, Key } from "../types";
 import { reminderTimeMinutes, isReminderEnabled } from "../config";
+import { Client} from "discord.js";
+
 
 // 現在鍵を借りているユーザーの情報（借りていない場合はnull）
 export let borrowerInfo: BorrowerInfo | null = null;
@@ -18,7 +20,7 @@ export let borrowerInfo: BorrowerInfo | null = null;
  * @param borrowButton - 借りるボタン
  */
 export const sendReminderMessage = async (
-  client: any,
+  client: Client,
   userId: string,
   username: string,
   channelId: string,
@@ -111,7 +113,7 @@ export const clearReminderTimer = () => {
  * @param borrowButton - 借りるボタン
  */
 export const rescheduleReminderTimer = (
-  client: any,
+  client: Client,
   keyStatus: Key,
   mapButtons: Map<Key, ActionRowBuilder<ButtonBuilder>>,
   borrowButton: ButtonBuilder

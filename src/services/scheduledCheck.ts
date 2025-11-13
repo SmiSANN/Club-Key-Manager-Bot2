@@ -2,7 +2,7 @@ import { TextChannel, EmbedBuilder, ActionRowBuilder, ButtonBuilder } from "disc
 import { Key, BorrowerInfo } from "../types";
 import { checkHour, checkMinute, isScheduledCheckEnabled } from "../config";
 import { borrowerInfo } from "./reminderService";
-
+import { Client} from "discord.js";
 // 定時チェックのタイマーID
 let scheduledCheckTimerId: ReturnType<typeof setTimeout> | null = null;
 
@@ -17,7 +17,7 @@ let scheduledCheckTimerId: ReturnType<typeof setTimeout> | null = null;
  * @param borrowButton - 借りるボタン
  */
 export const check20OClock = async (
-  client: any,
+  client: Client,
   keyStatus: Key,
   mapButtons: Map<Key, ActionRowBuilder<ButtonBuilder>>,
   borrowButton: ButtonBuilder
@@ -99,7 +99,7 @@ export const getMillisecondsUntil20OClock = (): number => {
  * @param borrowButton - 借りるボタン
  */
 export const schedule20OClockCheck = (
-  client: any,
+  client: Client,
   keyStatus: Key,
   mapButtons: Map<Key, ActionRowBuilder<ButtonBuilder>>,
   borrowButton: ButtonBuilder
