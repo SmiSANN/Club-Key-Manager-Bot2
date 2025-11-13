@@ -3,8 +3,9 @@
  * 各コマンドの処理ロジックを管理
  */
 
-import { ChatInputCommandInteraction, Colors, EmbedBuilder} from "discord.js";
+import { ChatInputCommandInteraction, Colors, EmbedBuilder } from "discord.js";
 import { Key } from "../types";
+import { getUserInfo } from "./handlerUtils";
 import {
   reminderTimeMinutes,
   checkHour,
@@ -52,8 +53,7 @@ export const handleBorrowCommand = async (
     const newStatus: Key = "BORROW";
 
     // ユーザー情報を取得
-    const username = interaction.user.username;
-    const userIconUrl = interaction.user.avatarURL();
+    const { username, userIconUrl } = getUserInfo(interaction);
 
     // 埋め込みメッセージを作成
     const embed = new EmbedBuilder()
