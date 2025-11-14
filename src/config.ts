@@ -2,10 +2,32 @@ import fs from "fs";
 import path from "path";
 import { string2boolean } from "./utils";
 
+/**
+ * 設定ファイル（settings.json）の型定義
+ */
+interface Settings {
+  LogChannel: string;
+  Token: string;
+  ModeConsole?: string | boolean;
+  ReminderTimeMinutes?: number;
+  checkHour?: number;
+  checkMinute?: number;
+}
+
 // 設定ファイル（settings.json）を読み込んでパース
-export const settings = JSON.parse(
-  fs.readFileSync(path.resolve(__dirname, "../src/settings.json"), "utf8")
-);
+let settings: Settings;
+try {
+  settings = JSON.parse(
+    fs.readFileSync(path.resolve(__dirname, "../src/settings.json"), "utf8")
+  );
+} catch (err) {
+  console.error(
+    "設定ファイル settings.json の読み込みまたはパースに失敗しました。\n" +
+    "エラー内容: " + err + "\n" +
+    "settings.json が存在しない場合は settings.json.sample をコピーして作成してください。"
+  );
+  process.exit(1);
+}
 
 // 設定ファイルから値を取得
 export const idLogChannel = settings.LogChannel; // ログを送信するDiscordチャンネルのID
