@@ -49,12 +49,6 @@ export const handleButtonInteraction = async (
     throw Error("buttonSet is undefined");
   }
 
-  // 更新後の状態に対応するラベルを取得
-  const label = mapLabel.get(newStatus);
-  if (!label) {
-    throw Error("label is undefined");
-  }
-
   // 更新後の状態に対応するPresence（ボットのオンライン状態）を取得
   const presence = mapPresence.get(newStatus);
   if (!presence) {
@@ -71,8 +65,20 @@ export const handleButtonInteraction = async (
   const embed = new EmbedBuilder()
     .setColor(Colors.Green)
     .setAuthor({ name: username, iconURL: userIconUrl ?? undefined })
-    .setTitle(`${label}`)
     .setTimestamp();
+
+  if (newStatus === "CLOSE") {
+    if (btn === "BORROW_KEY") {
+      embed.setTitle("借りました");
+    } else if (btn === "CLOSE") {
+      embed.setTitle("閉めました");
+    }
+  } else {
+    const label = mapLabel.get(newStatus);
+    if (label) {
+      embed.setTitle(label);
+    }
+  }
 
   // 鍵を借りた時の場合は、リマインダー設定情報を追加
   if (btn === "BORROW_KEY" && newStatus === "CLOSE") {

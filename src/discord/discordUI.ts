@@ -33,7 +33,6 @@ export const returnButton = new ButtonBuilder()
 export const mapLabel: Map<Key, string> = new Map([
   ["RETURN", "返しました"],
   ["OPEN", "開けました"],
-  ["CLOSE", "借りました"],
 ]);
 
 // 鍵の状態とボタンのセットを対応付けるマップ
