@@ -1,266 +1,143 @@
+/**
+ * Club Key Manager Bot - メインエントリーポイント
+ * 部室の鍵管理を行うDiscord Bot
+ */
+
+import { Events, Interaction, REST, Routes, TextChannel } from "discord.js";
+import { client } from "./discord/client";
+import { token, idLogChannel } from "./config";
+import { commands } from "./discord/commands";
+import { mapButtons, borrowButton } from "./discord/discordUI";
+import { schedule20OClockCheck } from "./services/scheduledCheck";
 import {
-  ActionRowBuilder,
-  ButtonBuilder,
-  ButtonStyle,
-  Client,
-  GatewayIntentBits,
-  Events,
-  TextChannel,
-  EmbedBuilder,
-  PresenceStatusData,
-} from "discord.js";
-import fs from "fs";
-import path from "path";
-import { messagingSlack, createMessage } from "./slack";
+  handleBorrowCommand,
+  handleReminderCommand,
+  handleScheduledCheckCommand,
+  handleReminderTimeCommand,
+  handleCheckTimeCommand,
+  handleStatusCommand,
+  handleOwnerCommand
+} from "./handlers/commandHandlers";
+import { handleButtonInteraction } from "./handlers/buttonHandlers";
+import { Key } from "./types";
 
-const settings = JSON.parse(
-  fs.readFileSync(path.resolve(__dirname, "../src/setting.json"), "utf8")
-);
+// 現在の鍵の状態を格納する変数（初期状態は返却済み）
+let keyStatus: Key = "RETURN";
 
-const client = new Client({
-  intents: [
-    GatewayIntentBits.Guilds,
-    GatewayIntentBits.GuildMessages,
-    GatewayIntentBits.MessageContent,
-    GatewayIntentBits.GuildMembers,
-  ],
-}); //必要な権限を書いている
+/**
+ * 現在の鍵の状態を取得する関数
+ * @returns 現在の鍵の状態
+ */
+export const getKeyStatus = (): Key => keyStatus;
 
-const id_log_channel = settings.LogChannel;
-const token = settings.Token;
-
-const string2boolean = (value: string | null | undefined): boolean => {
-  if (!value) {
-    return false;
-  }
-  return value.toLowerCase() === "true" || value === "1";
-}; //文字列をbooleanにする.下で操作卓モードにするか決める時に使う.
-
-const mode_console = string2boolean(settings.ModeConsole); //jsonファイルから操作卓モードにするかを決定する.
-
-const isUseSlack = string2boolean(settings.Slack.Use);
-
-type Key = "BORROW" | "OPEN" | "CLOSE" | "RETURN"; //鍵の状態の種類
-
-let var_status: Key = "RETURN"; //鍵の状態を格納する.状態によって値が変わる.
-
-type oper_key = (status: Key) => Key; //鍵への操作を表す関数の型.
-
-const borrow_key: oper_key = (status: Key) => {
-  return status === "RETURN" ? "BORROW" : status;
-}; //鍵を借りることができるかどうかの判定.0なら成功で1を返し, 失敗なら引数の値をそのまま返す.
-const open_key: oper_key = (status: Key) => {
-  return (status === "BORROW" || status === "CLOSE") && !mode_console
-    ? "OPEN"
-    : status;
-}; //鍵を開けることができるかどうかの判定.1か3なら成功で2を返し, 失敗なら引数の値をそのまま返す.操作卓モードだと失敗する.
-const close_key: oper_key = (status: Key) => {
-  return status === "OPEN" && !mode_console ? "CLOSE" : status;
-}; //鍵を閉めることができるかどうかの判定.2なら成功で3を返し, 失敗なら引数の値をそのまま返す.操作卓モードだと失敗する.
-const return_key: oper_key = (status: Key) => {
-  return status === "BORROW" || status === "CLOSE" ? "RETURN" : status;
-}; //鍵を返却することができるかどうかの判定.1か3なら成功で3を返し, 失敗なら引数の値をそのまま返す.
-
-// ボタンを定義している
-const borrow_button = new ButtonBuilder()
-  .setCustomId("BORROW")
-  .setLabel("借りる")
-  .setStyle(ButtonStyle.Success);
-const opne_button = new ButtonBuilder()
-  .setCustomId("OPEN")
-  .setLabel("開ける")
-  .setStyle(ButtonStyle.Success);
-const close_button = new ButtonBuilder()
-  .setCustomId("CLOSE")
-  .setLabel("閉める")
-  .setStyle(ButtonStyle.Danger);
-const return_button = new ButtonBuilder()
-  .setCustomId("RETURN")
-  .setLabel("返す")
-  .setStyle(ButtonStyle.Danger);
-
-//鍵の状態とラベルを対応付けている
-const mapLabel: Map<Key, string> = new Map([
-  ["RETURN", "返しました"],
-  ["BORROW", "借りました"],
-  ["OPEN", "開けました"],
-  ["CLOSE", "閉めました"],
-]);
-
-//鍵の状態とボタンのセットを対応付けている
-const mapButtons: Map<Key, ActionRowBuilder<ButtonBuilder>> = new Map([
-  [
-    "RETURN",
-    new ActionRowBuilder<ButtonBuilder>().addComponents(borrow_button),
-  ],
-  [
-    "BORROW",
-    !mode_console
-      ? new ActionRowBuilder<ButtonBuilder>()
-          .addComponents(opne_button)
-          .addComponents(return_button)
-      : new ActionRowBuilder<ButtonBuilder>().addComponents(return_button),
-  ],
-  ["OPEN", new ActionRowBuilder<ButtonBuilder>().addComponents(close_button)],
-  [
-    "CLOSE",
-    new ActionRowBuilder<ButtonBuilder>()
-      .addComponents(return_button)
-      .addComponents(opne_button),
-  ],
-]);
-
-//鍵の状態とそれに対応する操作を紐づけている
-const mapOpers: Map<Key, oper_key> = new Map([
-  ["RETURN", return_key],
-  ["BORROW", borrow_key],
-  ["OPEN", open_key],
-  ["CLOSE", close_key],
-]);
-
-//setPresenceの引数のオブジェクト内のActivityの型の定義
-type Activity = {
-  name: string;
-};
-//setPresenceの引数のオブジェクトの型の定義
-type Presence = {
-  status: PresenceStatusData;
-  activities: Activity[];
+/**
+ * 鍵の状態を設定する関数
+ * @param newStatus 新しい鍵の状態
+ */
+export const setKeyStatus = (newStatus: Key): void => {
+  keyStatus = newStatus;
 };
 
-//状態とPrecenceを紐づけている
-const mapPresence: Map<Key, Presence> = new Map([
-  [
-    "RETURN",
-    {
-      status: "invisible",
-      activities: [],
-    },
-  ],
-  [
-    "BORROW",
-    {
-      status: "idle",
-      activities: [],
-    },
-  ],
-  [
-    "OPEN",
-    {
-      status: "online",
-      activities: [{ name: "部室" }],
-    },
-  ],
-  [
-    "CLOSE",
-    {
-      status: "idle",
-      activities: [],
-    },
-  ],
-]);
-
-//ボットが起動したら
-client.once("ready", (bot) => {
+/**
+ * ボットが起動した時のイベントハンドラー
+ * 初期設定とスラッシュコマンドの登録を行う
+ */
+client.once("ready", async (bot) => {
   console.log("Ready!");
 
-  if (client.user) {
-    console.log(client.user.tag);
+  // client.userが存在することを確認
+  if (!client.user) {
+    console.error("クライアントユーザー情報が取得できませんでした");
+    return;
   }
-  client.user?.setPresence({
+
+  // ボットのユーザー名をコンソールに表示
+  console.log(`${client.user.tag} としてログインしました！`);
+
+  // ボットのステータスを非公開（invisible）に設定
+  client.user.setPresence({
     status: "invisible",
     activities: [],
-  }); //ステータスを非公開にする
-
-  //鍵用チャンネルに初期メッセージを送る
-  if (id_log_channel) {
-    const initialButtonSet: ActionRowBuilder<ButtonBuilder> =
-      mapButtons.get("RETURN") ?? new ActionRowBuilder<ButtonBuilder>();
-    (bot.channels?.cache.get(id_log_channel) as TextChannel).send({
-      content: "鍵管理Botです. 鍵をに対する操作を選んでください.",
-      components: [initialButtonSet],
-    });
-  } //discordにメッセージを送る
-});
-//型がKeyかどうかを確認するためのユーザー定義型ガード
-const isKey = (value: string): value is Key => {
-  return (
-    value === "BORROW" ||
-    value === "OPEN" ||
-    value === "CLOSE" ||
-    value === "RETURN"
-  );
-};
-
-client.on(Events.InteractionCreate, async (interaction) => {
-  if (!interaction.isButton()) {
-    throw Error("interaction is not Button");
-  } //インタラクションがボタンかどうかを確認する
-  if (!isKey(var_status)) {
-    throw Error("var_status is not apropriate");
-  } //var_statusの型がKeyかどうかを確認する
-
-  const btn = interaction.customId; //押されたボタンの状態(型:Key)を代入する
-  if (!isKey(btn)) {
-    throw Error("buttonInteraction.customId is not Key");
-  } //customIdがKey型かどうかを確認する.
-
-  const oper = mapOpers.get(btn); //押されたボタンに対応する操作を得る
-  if (!oper) {
-    throw Error("oper is undefined");
-  }
-  var_status = oper(var_status); //状態を更新する
-
-  const buttonSet = mapButtons.get(var_status); //更新後の状態に対応するボタンセットを得る
-  if (!buttonSet) {
-    throw Error("buttonSet is undefined");
-  }
-
-  const label = mapLabel.get(var_status); //更新後の状態に対応するラベルを得る
-  if (!label) {
-    throw Error("label is undefined");
-  }
-
-  const presence = mapPresence.get(var_status); //更新後の状態に対応するPresenceを得る
-  if (!presence) {
-    throw Error("presence is undefined");
-  }
-
-  interaction.client.user.setPresence(presence); //Presenceを更新する
-
-  const userTag = interaction.user.tag; // userTagを取得
-
-  // userTagを#で分割して識別タグが0ならば，usernameを取得する
-  const username = userTag.split("#")[1] ? interaction.user.username : userTag;
-
-  const userIconUrl = interaction.user.avatarURL();
-
-  const embed = new EmbedBuilder() //鍵になにかした時のメッセージを作る
-    .setColor(0x0099ff) //水色っぽい色
-    .setAuthor({ name: username, iconURL: userIconUrl ?? undefined }) //ボタンを押した人のユーザー名とアイコンを取得する
-    .setTitle(`${label}`) //行った操作を表示する
-    .setTimestamp();
-
-  interaction.reply({
-    embeds: [embed],
-    components: [buttonSet],
   });
 
-  // 前回のメッセージを取得
-  const previousMessage = await interaction.channel?.messages.fetch(
-    interaction.message.id
-  );
+  // Discord APIとの通信用RESTクライアントを作成
+  const rest = new REST({ version: "10" }).setToken(token);
 
-  // もし前回のメッセージがあれば，ボタンを無効化する
-  if (previousMessage) {
-    previousMessage.edit({
-      embeds: previousMessage.embeds,
-      components: [],
-    });
+  try {
+    console.log("スラッシュコマンドを登録しています...");
+    
+    // スラッシュコマンドをDiscord APIに登録
+    await rest.put(
+      Routes.applicationCommands(client.user.id),
+      { body: commands }
+    );
+    console.log("スラッシュコマンドの登録が完了しました。");
+  } catch (error) {
+    console.error("スラッシュコマンドの登録に失敗しました:", error);
   }
 
-  if (isUseSlack) {
-    messagingSlack(createMessage(username)(label))(settings.Slack.WebhookUrl);
+  // 定時チェック（デフォルトは20時）をスケジュール
+  schedule20OClockCheck(client, mapButtons, borrowButton);
+
+  // 鍵管理用チャンネルに初期メッセージを送信
+  if (idLogChannel) {
+    // 返却済み状態のボタンセット（「借りる」ボタン）を取得
+    const initialButtonSet = mapButtons.get("RETURN");
+    if (initialButtonSet) {
+      // チャンネルにメッセージを送信
+      (bot.channels?.cache.get(idLogChannel) as TextChannel).send({
+        content: "鍵管理Botです. 鍵に対する操作を選んでください.",
+        components: [initialButtonSet],
+      });
+    }
   }
 });
+
+/**
+ * インタラクション(ボタンクリックやスラッシュコマンド)が発生した時のイベントハンドラー
+ */
+client.on(Events.InteractionCreate, async (interaction: Interaction) => {
+  // ==============================
+  // スラッシュコマンドの処理
+  // ==============================
+  if (interaction.isChatInputCommand()) {
+    const { commandName } = interaction;
+
+    switch (commandName) {
+      case "borrow":
+        keyStatus = await handleBorrowCommand(interaction, keyStatus);
+        break;
+      case "reminder":
+        await handleReminderCommand(interaction, keyStatus);
+        break;
+      case "scheduled-check":
+        await handleScheduledCheckCommand(interaction, keyStatus);
+        break;
+      case "reminder-time":
+        await handleReminderTimeCommand(interaction, keyStatus);
+        break;
+      case "check-time":
+        await handleCheckTimeCommand(interaction, keyStatus);
+        break;
+      case "status":
+        await handleStatusCommand(interaction, keyStatus);
+        break;
+      case "owner":
+        await handleOwnerCommand(interaction, keyStatus);
+        break;
+      default:
+        console.log(`未知のコマンド: ${commandName}`);
+    }
+    return;
+  }
+
+  // ==============================
+  // ボタンクリックの処理
+  // ==============================
+  if (interaction.isButton()) {
+    keyStatus = await handleButtonInteraction(interaction, keyStatus);
+  }
+});
+
+// Discordボットにログイン
 client.login(token);

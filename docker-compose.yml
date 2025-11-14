@@ -1,0 +1,9 @@
+version: '3.8'
+
+services:
+  club-key-manager:
+    build: .
+    container_name: club-key-manager-bot
+    restart: unless-stopped
+    volumes:
+      - ./src/settings.json:/app/src/settings.json:ro
