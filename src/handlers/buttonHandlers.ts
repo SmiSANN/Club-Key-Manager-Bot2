@@ -3,15 +3,14 @@
  * 鍵の操作ボタンが押された時の処理を管理
  */
 
-import { ButtonInteraction, Colors, EmbedBuilder, ActionRowBuilder, ButtonBuilder } from "discord.js";
+import { ButtonInteraction, Colors, EmbedBuilder } from "discord.js";
 import { Key } from "../types";
 import { isKey, minutesToMs } from "../utils";
-import { getUserInfo } from "./handlerUtils";
-import { mapButtons, mapLabel, mapOpers, mapPresence, borrowButton, returnButton, openButton, createReminderToggleButton, getButtons } from "../discord/discordUI";
+import { getUserInfo, addReminderSettingsToEmbed, saveBorrowerInfo } from "./handlerUtils";
+import { mapButtons, mapLabel, mapOpers, mapPresence, borrowButton, getButtons } from "../discord/discordUI";
 import {
   sendReminderMessage,
   clearReminderTimer,
-  setBorrowerInfo
 } from "../services/reminderService";
 import { config, toggleReminderEnabled } from "../config";
 import { client } from "../discord/client";
@@ -106,19 +105,7 @@ export const handleButtonInteraction = async (
 
   // 鍵を借りた時の場合は、リマインダー設定情報を追加
   if (btn === "BORROW" && newStatus === "BORROW") {
-    if (config.isReminderEnabled) {
-      embed.addFields({
-        name: "⏰ リマインダー設定",
-        value: `リマインダーが有効です\n・間隔: ${config.reminderTimeMinutes}分ごと\n・定時チェック: ${config.checkHour}時${config.checkMinute}分`,
-        inline: false
-      });
-    } else {
-      embed.addFields({
-        name: "⏰ リマインダー設定",
-        value: `リマインダーは無効です\n・定時チェック: ${config.isScheduledCheckEnabled ? `${config.checkHour}時${config.checkMinute}分` : "無効"}`,
-        inline: false
-      });
-    }
+    addReminderSettingsToEmbed(embed);
   }
 
   // インタラクションに返信
@@ -149,7 +136,6 @@ export const handleButtonInteraction = async (
 
     // リマインダー機能がONの場合のみタイマーを設定
     if (config.isReminderEnabled) {
-      const now = Date.now();
       const timerId = setTimeout(() => {
         sendReminderMessage(
           client,
@@ -160,28 +146,14 @@ export const handleButtonInteraction = async (
         );
       }, minutesToMs(config.reminderTimeMinutes));
 
-      setBorrowerInfo({
-        userId: interaction.user.id,
-        username: username,
-        channelId: interaction.channelId,
-        timerId: timerId,
-        borrowedAt: now,
-        reminderCount: 0,
-      });
+      saveBorrowerInfo(interaction.user.id, username, interaction.channelId, timerId);
 
       console.log(
         `${username}が鍵を借りました。${config.reminderTimeMinutes}分後にリマインダーを送信します。`
       );
     } else {
       // リマインダーOFFの場合でも借りたユーザー情報は保存
-      setBorrowerInfo({
-        userId: interaction.user.id,
-        username: username,
-        channelId: interaction.channelId,
-        timerId: null,
-        borrowedAt: Date.now(),
-        reminderCount: 0,
-      });
+      saveBorrowerInfo(interaction.user.id, username, interaction.channelId);
       console.log(
         `${username}が鍵を借りました。リマインダー機能はOFFです。`
       );

@@ -36,7 +36,7 @@ export const returnButton = new ButtonBuilder()
 export const createReminderToggleButton = (isReminderEnabled: boolean): ButtonBuilder => {
   // ラベルはリマインダーに統一
   const label = "リマインダー";
-  // オフ→オン: Secondary（灰色）、オン→オフ: Success（緑）
+  // 現在の状態を色で表示: ON時は Success（緑）、OFF時は Secondary（灰色）
   const color = isReminderEnabled ? ButtonStyle.Success : ButtonStyle.Secondary;
 
   return new ButtonBuilder()
