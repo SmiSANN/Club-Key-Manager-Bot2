@@ -28,6 +28,23 @@ export const returnButton = new ButtonBuilder()
   .setLabel("返す")
   .setStyle(ButtonStyle.Danger);
 
+/**
+ * 現在のリマインダー状態に基づいてリマインダートグルボタンを生成する関数
+ * @param isReminderEnabled - リマインダーが有効かどうか
+ * @returns 適切な色とラベルのボタン
+ */
+export const createReminderToggleButton = (isReminderEnabled: boolean): ButtonBuilder => {
+  // ラベルはリマインダーに統一
+  const label = "リマインダー";
+  // オフ→オン: Secondary（灰色）、オン→オフ: Success（緑）
+  const color = isReminderEnabled ? ButtonStyle.Success : ButtonStyle.Secondary;
+
+  return new ButtonBuilder()
+    .setCustomId("TOGGLE_REMINDER")
+    .setLabel(label)
+    .setStyle(color);
+};
+
 // 鍵の状態とラベルを対応付けるマップ
 // メッセージに表示するラベルを管理
 export const mapLabel: Map<Key, string> = new Map([
@@ -56,7 +73,7 @@ export const mapButtons: Map<Key, ActionRowBuilder<ButtonBuilder>> = new Map([
   ],
   // 開けた状態: 「閉める」ボタンのみ表示
   ["OPEN", new ActionRowBuilder<ButtonBuilder>().addComponents(closeButton)],
-  // 閉めた状態: 「返す」と「開ける」ボタンを表示
+  // 閉めた状態: 「返す」と「開ける」ボタンを表示（リマインダーボタンは動的に追加）
   [
     "CLOSE",
     new ActionRowBuilder<ButtonBuilder>()
@@ -73,6 +90,38 @@ export const mapOpers: Map<Key, OperKey> = new Map([
   ["OPEN", openKey],
   ["CLOSE", closeKey],
 ]);
+
+/**
+ * 鍵の状態に応じたボタンセットを取得する関数
+ * BORROW状態またはCLOSE状態の場合はリマインダートグルボタンを動的に追加
+ * @param keyStatus - 現在の鍵の状態
+ * @param isReminderEnabled - リマインダーが有効かどうか
+ * @returns ボタンセット
+ */
+export const getButtons = (keyStatus: Key, isReminderEnabled: boolean): ActionRowBuilder<ButtonBuilder> => {
+  const reminderButton = createReminderToggleButton(isReminderEnabled);
+  
+  if (keyStatus === "BORROW") {
+    // 借りた状態: 操作卓モードでない場合は「開ける」「返す」「リマインダー」、操作卓モードの場合は「返す」「リマインダー」
+    return !modeConsole
+      ? new ActionRowBuilder<ButtonBuilder>()
+          .addComponents(openButton, returnButton, reminderButton)
+      : new ActionRowBuilder<ButtonBuilder>()
+          .addComponents(returnButton, reminderButton);
+  }
+  
+  if (keyStatus === "CLOSE") {
+    // 閉めた状態: 「返す」「開ける」「リマインダー」を表示
+    return new ActionRowBuilder<ButtonBuilder>()
+      .addComponents(returnButton, openButton, reminderButton);
+  }
+  
+  const buttons = mapButtons.get(keyStatus);
+  if (!buttons) {
+    throw Error(`Buttons for status ${keyStatus} not found`);
+  }
+  return buttons;
+};
 
 // 鍵の状態とPresenceを紐づけるマップ
 // 鍵の状態によってボットのオンライン状態を変更する

@@ -3,17 +3,17 @@
  * 鍵の操作ボタンが押された時の処理を管理
  */
 
-import { ButtonInteraction, Colors, EmbedBuilder } from "discord.js";
+import { ButtonInteraction, Colors, EmbedBuilder, ActionRowBuilder, ButtonBuilder } from "discord.js";
 import { Key } from "../types";
 import { isKey, minutesToMs } from "../utils";
 import { getUserInfo } from "./handlerUtils";
-import { mapButtons, mapLabel, mapOpers, mapPresence, borrowButton } from "../discord/discordUI";
+import { mapButtons, mapLabel, mapOpers, mapPresence, borrowButton, returnButton, openButton, createReminderToggleButton, getButtons } from "../discord/discordUI";
 import {
   sendReminderMessage,
   clearReminderTimer,
   setBorrowerInfo
 } from "../services/reminderService";
-import { config } from "../config";
+import { config, toggleReminderEnabled } from "../config";
 import { client } from "../discord/client";
 
 /**
@@ -34,6 +34,34 @@ export const handleButtonInteraction = async (
   // 押されたボタンのカスタムIDを取得
   const btn = interaction.customId;
 
+  // リマインダートグルボタンの特別処理
+  if (btn === "TOGGLE_REMINDER") {
+    const newState = toggleReminderEnabled();
+    
+    // ユーザー情報を取得
+    const { username, userIconUrl } = getUserInfo(interaction);
+    
+    // 現在のボタンセットを取得（鍵の状態は変更しない、リマインダー状態は更新後の値を使用）
+    const buttonSet = getButtons(keyStatus, newState);
+
+    // リマインダートグル結果を表示する埋め込みメッセージを作成
+    const embed = new EmbedBuilder()
+      .setColor(Colors.Blue)
+      .setAuthor({ name: username, iconURL: userIconUrl ?? undefined })
+      .setTitle("リマインダー設定変更")
+      .setDescription(`リマインダー機能を${newState ? "ON" : "OFF"}にしました。`)
+      .setTimestamp();
+
+    // インタラクションに返信
+    await interaction.reply({
+      embeds: [embed],
+      components: [buttonSet],
+    });
+
+    console.log(`リマインダー機能: ${newState ? "ON" : "OFF"}`);
+    return keyStatus; // 鍵の状態は変更しない
+  }
+
   // カスタムIDがKey型かどうかを確認
   if (!isKey(btn)) {
     throw Error("buttonInteraction.customId is not Key");
@@ -49,10 +77,7 @@ export const handleButtonInteraction = async (
   const newStatus = oper(keyStatus);
 
   // 更新後の状態に対応するボタンセットを取得
-  const buttonSet = mapButtons.get(newStatus);
-  if (!buttonSet) {
-    throw Error("buttonSet is undefined");
-  }
+  const buttonSet = getButtons(newStatus, config.isReminderEnabled);
 
   // 更新後の状態に対応するラベルを取得
   const label = mapLabel.get(newStatus);

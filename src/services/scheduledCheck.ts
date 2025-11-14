@@ -5,6 +5,7 @@ import { borrowerInfo } from "./reminderService";
 import { Client} from "discord.js";
 import { getKeyStatus } from "../main";
 import { msToMinutes } from "../utils";
+import { getButtons } from "../discord/discordUI";
 // 定時チェックのタイマーID
 let scheduledCheckTimerId: ReturnType<typeof setTimeout> | null = null;
 
@@ -45,7 +46,7 @@ export const check20OClock = async (
           .setTimestamp();
 
         // 現在の鍵の状態に応じたボタンセットを取得
-        const currentButtonSet = mapButtons.get(keyStatus) || new ActionRowBuilder<ButtonBuilder>().addComponents(borrowButton);
+        const currentButtonSet = getButtons(keyStatus, config.isReminderEnabled);
 
         // メッセージを送信
         await channel.send({

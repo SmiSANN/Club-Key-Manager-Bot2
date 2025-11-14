@@ -4,6 +4,7 @@ import { minutesToMs, msToMinutes} from "../utils";
 import { config } from "../config";
 import { Client } from "discord.js";
 import { getKeyStatus } from "../main";
+import { getButtons } from "../discord/discordUI";
 
 
 // 現在鍵を借りているユーザーの情報（借りていない場合はnull）
@@ -67,7 +68,7 @@ export const sendReminderMessage = async (
         .setTimestamp();
 
       // 現在の鍵の状態に応じたボタンセットを取得
-      const currentButtonSet = mapButtons.get(keyStatus) || new ActionRowBuilder<ButtonBuilder>().addComponents(borrowButton);
+      const currentButtonSet = getButtons(keyStatus, config.isReminderEnabled);
 
       // メッセージを送信
       await channel.send({

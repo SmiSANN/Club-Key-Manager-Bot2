@@ -22,15 +22,18 @@ import {
 } from "../services/reminderService";
 import { schedule20OClockCheck } from "../services/scheduledCheck";
 import { client } from "../discord/client";
-import { mapButtons, borrowButton, mapPresence } from "../discord/discordUI";
+import { mapButtons, borrowButton, mapPresence, getButtons } from "../discord/discordUI";
 import { minutesToMs } from "../utils";
 
 /**
  * 現在の鍵の状態に応じたボタンを取得するヘルパー関数
  */
 export const getKeyButtonsForCommand = (keyStatus: Key) => {
-  const buttons = mapButtons.get(keyStatus);
-  return buttons || mapButtons.get("RETURN")!;
+  try {
+    return getButtons(keyStatus, config.isReminderEnabled);
+  } catch {
+    return mapButtons.get("RETURN")!;
+  }
 };
 
 /**
@@ -74,7 +77,7 @@ export const handleBorrowCommand = async (
     }
 
     // ボタンセットを取得
-    const buttonSet = mapButtons.get(newStatus);
+    const buttonSet = getButtons(newStatus, config.isReminderEnabled);
 
     // 返信を送信
     await interaction.reply({
