@@ -1,14 +1,12 @@
-/**
- * Club Key Manager Bot - メインエントリーポイント
- * 部室の鍵管理を行うDiscord Bot
- */
-
-import { Events, Interaction, REST, Routes, TextChannel } from "discord.js";
-import { client } from "./discord/client";
-import { token, idLogChannel, config } from "./config";
+import { Events, REST, Routes, TextChannel } from "discord.js";
+import {
+  discordBot,
+  config,
+  presenter,
+  scheduledCheckService,
+  keyRepository
+} from "./container";
 import { commands } from "./discord/commands";
-import { getButtons } from "./discord/discordUI";
-import { schedule20OClockCheck } from "./services/scheduledCheck";
 import {
   handleBorrowCommand,
   handleReminderCommand,
@@ -17,58 +15,31 @@ import {
   handleCheckTimeCommand,
   handleStatusCommand,
   handleOwnerCommand
-} from "./handlers/commandHandlers";
-import { handleButtonInteraction } from "./handlers/buttonHandlers";
-import { Key } from "./types";
+} from "./interfaces/handlers/SlashCommandHandlers";
+import { handleButtonInteraction } from "./interfaces/handlers/ButtonHandlers";
 
-// 現在の鍵の状態を格納する変数（初期状態は返却済み）
-let keyStatus: Key = "RETURN";
-
-/**
- * 現在の鍵の状態を取得する関数
- * @returns 現在の鍵の状態
- */
-export const getKeyStatus = (): Key => keyStatus;
-
-/**
- * 鍵の状態を設定する関数
- * @param newStatus 新しい鍵の状態
- */
-export const setKeyStatus = (newStatus: Key): void => {
-  keyStatus = newStatus;
-};
-
-/**
- * ボットが起動した時のイベントハンドラー
- * 初期設定とスラッシュコマンドの登録を行う
- */
-client.once("ready", async (bot) => {
+// ボットが起動した時のイベントハンドラー
+discordBot.onReady(async () => {
   console.log("Ready!");
 
-  // client.userが存在することを確認
-  if (!client.user) {
+  if (!discordBot.client.user) {
     console.error("クライアントユーザー情報が取得できませんでした");
     return;
   }
 
-  // ボットのユーザー名をコンソールに表示
-  console.log(`${client.user.tag} としてログインしました！`);
+  console.log(`${discordBot.client.user.tag} としてログインしました！`);
 
-  // ボットのステータスを非公開（invisible）に設定
-  client.user.setPresence({
+  discordBot.client.user.setPresence({
     status: "invisible",
     activities: [],
   });
 
-  // Discord APIとの通信用RESTクライアントを作成
-  const rest = new REST({ version: "10" }).setToken(token);
+  const rest = new REST({ version: "10" }).setToken(config.token);
 
   try {
     console.log("スラッシュコマンドを登録しています...");
-
-    // スラッシュコマンドをDiscord APIに登録
     await rest.put(
-      Routes.applicationCommands(client.user.id),
+      Routes.applicationCommands(discordBot.client.user.id),
       { body: commands }
     );
     console.log("スラッシュコマンドの登録が完了しました。");
@@ -76,54 +47,57 @@ client.once("ready", async (bot) => {
     console.error("スラッシュコマンドの登録に失敗しました:", error);
   }
 
-  // 定時チェック（デフォルトは20時）をスケジュール
-  schedule20OClockCheck(client);
+  // 定時チェックを開始
+  scheduledCheckService.start();
 
   // 鍵管理用チャンネルに初期メッセージを送信
-  if (idLogChannel) {
+  if (config.logChannelId) {
     // 返却済み状態のボタンセット（「借りる」ボタン）を取得
-    const initialButtonSet = getButtons("RETURN", config.isReminderEnabled);
+    // Note: In original, it sends "RETURN" buttons regardless of actual status?
+    // Or should it send current status? Original sent "RETURN".
+    // But if we persist state, we should probably send current status.
+    // Let's send current status.
+    const status = await keyRepository.get();
+    const initialButtonSet = presenter.getButtons(status);
+
     if (initialButtonSet) {
-      // チャンネルにメッセージを送信
-      (bot.channels?.cache.get(idLogChannel) as TextChannel).send({
-        content: "鍵管理Botです. 鍵に対する操作を選んでください.",
-        components: [initialButtonSet],
-      });
+      const channel = discordBot.client.channels.cache.get(config.logChannelId) as TextChannel;
+      if (channel) {
+        channel.send({
+          content: "鍵管理Botです. 鍵に対する操作を選んでください.",
+          components: [initialButtonSet],
+        });
+      }
     }
   }
 });
 
-/**
- * インタラクション(ボタンクリックやスラッシュコマンド)が発生した時のイベントハンドラー
- */
-client.on(Events.InteractionCreate, async (interaction: Interaction) => {
-  // ==============================
-  // スラッシュコマンドの処理
-  // ==============================
+// インタラクションハンドラー
+discordBot.onInteractionCreate(async (interaction) => {
   if (interaction.isChatInputCommand()) {
     const { commandName } = interaction;
 
     switch (commandName) {
       case "borrow":
-        keyStatus = await handleBorrowCommand(interaction, keyStatus);
+        await handleBorrowCommand(interaction);
         break;
       case "reminder":
-        await handleReminderCommand(interaction, keyStatus);
+        await handleReminderCommand(interaction);
         break;
       case "scheduled-check":
-        await handleScheduledCheckCommand(interaction, keyStatus);
+        await handleScheduledCheckCommand(interaction);
         break;
       case "reminder-time":
-        await handleReminderTimeCommand(interaction, keyStatus);
+        await handleReminderTimeCommand(interaction);
         break;
       case "check-time":
-        await handleCheckTimeCommand(interaction, keyStatus);
+        await handleCheckTimeCommand(interaction);
         break;
       case "status":
-        await handleStatusCommand(interaction, keyStatus);
+        await handleStatusCommand(interaction);
         break;
       case "owner":
-        await handleOwnerCommand(interaction, keyStatus);
+        await handleOwnerCommand(interaction);
         break;
       default:
         console.log(`未知のコマンド: ${commandName}`);
@@ -131,13 +105,10 @@ client.on(Events.InteractionCreate, async (interaction: Interaction) => {
     return;
   }
 
-  // ==============================
-  // ボタンクリックの処理
-  // ==============================
   if (interaction.isButton()) {
-    keyStatus = await handleButtonInteraction(interaction, keyStatus);
+    await handleButtonInteraction(interaction);
   }
 });
 
-// Discordボットにログイン
-client.login(token);
+// ログイン
+discordBot.login();

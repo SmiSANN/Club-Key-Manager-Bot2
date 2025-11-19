@@ -87,25 +87,25 @@ docker compose restart
 - Colors.Gold	#F1C40F	警告・強調 (Warning)
 - Colors.Red	#ED4245	エラー (Error)
 
-## ファイル構成
+## ファイル構成 (Refactored)
 
 ```
 src/
-├── config.ts              # 設定管理
-├── types.ts               # 型定義
-├── utils.ts               # ユーティリティ関数
 ├── main.ts                # エントリーポイント
-├── discord/               # Discord関連
-│   ├── client.ts          # Discordクライアント初期化
-│   ├── commands.ts        # コマンド定義
-│   └── discordUI.ts       # UI要素（ボタン、プレゼンス等）
-├── services/              # ビジネスロジック
-│   ├── keyOperations.ts   # 鍵操作ロジック
-│   ├── reminderService.ts # リマインダー管理
-│   └── scheduledCheck.ts  # 定時チェック
-└── handlers/              # インタラクションハンドラー
-    ├── commandHandlers.ts # スラッシュコマンド処理
-    └── buttonHandlers.ts  # ボタンインタラクション処理
+├── container.ts           # 依存関係コンテナ
+├── domain/                # ドメイン層 (ビジネスロジック)
+│   ├── models/            # ドメインモデル (KeyStatus, Borrower)
+│   ├── services/          # ドメインサービス (KeyService)
+│   └── repositories/      # リポジトリインターフェース
+├── application/           # アプリケーション層 (ユースケース)
+│   ├── usecases/          # ユースケース (BorrowKey, ReturnKey, etc.)
+│   └── services/          # アプリケーションサービス (Reminder, ScheduledCheck)
+├── infrastructure/        # インフラストラクチャ層 (外部システム)
+│   ├── config/            # 設定管理
+│   ├── discord/           # Discord関連 (Bot, Presenter)
+│   └── persistence/       # 永続化 (FileRepository)
+└── interfaces/            # インターフェース層 (ハンドラー)
+    └── handlers/          # コマンド・ボタンハンドラー
 ```
 
 ## 環境変数・セキュリティ
@@ -113,6 +113,3 @@ src/
   - `src/.gitignore` に `settings.json` が登録されています
   - `src/settings.json.sample` をテンプレートとして使用してください
 - Token が漏洩した場合は、Discord 開発者ポータルで即座に再生成してください
-
-
-
